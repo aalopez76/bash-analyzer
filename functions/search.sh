@@ -70,7 +70,7 @@ case "$ACTION" in
   output_file="$script_dir/../output/regex_result.txt"
 
   scope=$(whiptail --title "SEARCH" --menu "Find regex in:" 15 60 3 \
-    "1" "All files" \
+    "1" "All file" \
     "2" "Specific column" 3>&1 1>&2 2>&3)
   [ -z "$scope" ] && exit 0
 
