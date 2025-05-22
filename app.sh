@@ -46,7 +46,7 @@ display_menu() {
     case "$choice" in
         0) bash "$functions_dir/file-scan.sh" ;;
         1) bash "$functions_dir/search.sh" ;;
-        2) whiptail --title "Exit" --msgbox "Session Ended" 10 50; break ;;
+        2) whiptail --title "Exit" --msgbox "End Session" 10 50; break ;;
         *) break ;;
     esac
   done
