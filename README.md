@@ -1,2 +1,2 @@
-# Linux
+# Bash Advanced Analyzer
 Scripts- bash
