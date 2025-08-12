@@ -19,6 +19,8 @@ This Bash-based tool provides a robust command-line interface for analyzing CSV/
   * Extract rows/columns under custom conditions (multi-column filtering)
   * Sort data based on a specific column
   * List unique values of any column
+ 
+![App](bash-analyzer/img/app.png)    
 
 ## Requirements
 
