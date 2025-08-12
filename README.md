@@ -20,7 +20,7 @@ This Bash-based tool provides a robust command-line interface for analyzing CSV/
   * Sort data based on a specific column
   * List unique values of any column
  
-![Appp](bash-analyzer/img/app.png)    
+![App](bash-analyzer/img/app.png)    
 
 ## Requirements
 
