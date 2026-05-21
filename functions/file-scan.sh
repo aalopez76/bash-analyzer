@@ -1,166 +1,141 @@
 #!/bin/bash
 
-script_dir="$(dirname "$0")"
-directory=$(<"$script_dir/../functions/directory.txt")
-output_file="$script_dir/../output/scan-report.txt"
-mkdir -p "$script_dir/../output"
+# ================================
+# FILE SCAN — FILE-SCAN.SH
+# ================================
 
-# Funciones auxiliares
-detect_delimiter() {
-  local line
-  line=$(head -n 2 "$1" | tail -n 1)
-  if grep -q $'\t' <<< "$line"; then
-    echo -e "\t"
-  elif grep -q ';' <<< "$line"; then
-    echo ";"
-  else
-    echo ","
-  fi
-}
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+
+output_file="$OUTPUT_DIR/scan-report.txt"
+
+load_selected_file || exit 0
+files=("$selected_file")
+check_duplicates_single=true
 
 classify_columns() {
-  local file="$1"
-  local delimiter="$2"
+  local file="$1" delimiter="$2"
   awk -F"$delimiter" '
-  NR == 1 { for (i = 1; i <= NF; i++) header[i] = $i; next }
+  NR == 1 { for (i = 1; i <= NF; i++) { header[i] = $i; ncols = NF } next }
   {
     for (i = 1; i <= NF; i++) {
-      if ($i !~ /^[0-9]+([.][0-9]+)?$/) nonnum[i]++;
-      total[i]++;
+      if ($i !~ /^-?[0-9]+([.][0-9]+)?([eE][+-]?[0-9]+)?$/) nonnum[i]++
+      total[i]++
     }
   }
   END {
-    for (i = 1; i <= length(header); i++) {
-      tipo = (nonnum[i] > 0) ? "NON NUMERIC" : "NUMERIC";
-      printf "Column %d (%s): %s\n", i, header[i], tipo;
+    for (i = 1; i <= ncols; i++) {
+      tipo = (nonnum[i] > 0) ? "NON-NUMERIC" : "NUMERIC"
+      printf "  Column %d (%s): %s\n", i, header[i], tipo
     }
   }' "$file"
 }
 
-# Buscar archivos CSV/TSV
-mapfile -t files < <(find "$directory" -maxdepth 1 -type f \( -iname "*.csv" -o -iname "*.tsv" \))
-[[ "${#files[@]}" -eq 0 ]] && whiptail --msgbox "No CSV/TSV found in: $directory" 10 60 && exit 1
-
-# Escoger escaneo total o individual
-scan_option=$(whiptail --title "FILE SCAN" --menu " Scan:" 15 60 2 \
-"1" "All files in the directory" \
-"2" "Select files" 3>&1 1>&2 2>&3)
-
-[[ -z "$scan_option" ]] && exit 0   # ←←← CORRECCIÓN: volver al menú principal si se presiona Cancel
-
-if [[ "$scan_option" == "2" ]]; then
-  file_choices=()
-  for i in "${!files[@]}"; do
-    fname=$(basename "${files[$i]}")
-    file_choices+=("$i" "$fname")
-  done
-  selected_idx=$(whiptail --title "SELECT FILE" --menu "File to scan:" 20 70 10 "${file_choices[@]}" 3>&1 1>&2 2>&3)
-  [[ -z "$selected_idx" ]] && exit 0
-  selected_file="${files[$selected_idx]}"
-  files=("$selected_file")
-  check_duplicates_single=true
-fi
-
-# Mostrar opción de líneas a visualizar
-lines_view=$(whiptail --radiolist "Lines to show:" 15 60 4 \
-"H" "Head" ON \
-"T" "Tail" OFF \
-"B" "Both" OFF \
-"N" "None" OFF 3>&1 1>&2 2>&3)
+# Lines preview option
+lines_view=$(whiptail --radiolist "Lines to show in preview:" 15 60 4 \
+  "H" "Head" ON \
+  "T" "Tail" OFF \
+  "B" "Both (head + tail)" OFF \
+  "N" "None" OFF 3>&1 1>&2 2>&3)
 [[ -z "$lines_view" ]] && exit 0
 
-# Preguntar cuántas líneas solo si no es "none"
 if [[ "$lines_view" != "N" ]]; then
-  num_lines=$(whiptail --inputbox "Lines to display (default 5):" 10 60 5 3>&1 1>&2 2>&3)
+  num_lines=$(whiptail --inputbox "Number of lines to display (default 5):" 10 60 5 3>&1 1>&2 2>&3)
   [[ $? -ne 0 ]] && exit 0
   [[ -z "$num_lines" ]] && num_lines=5
 else
   num_lines=0
 fi
 
-# Iniciar reporte
-echo "File Scan CSV/TSV" > "$output_file"
-echo "Directory: $directory" >> "$output_file"
-echo "Analyzed files $(date)" >> "$output_file"
-echo "======================================================" >> "$output_file"
-echo "" >> "$output_file"
+# Initialize report
+{
+  echo "FILE SCAN REPORT"
+  echo "File      : $(basename "$selected_file_original")"
+  echo "Directory : $(dirname "$selected_file_original")"
+  echo "Generated : $(date)"
+  echo "======================================================"
+  echo ""
+} > "$output_file"
 
 declare -A file_hashes
 declare -A duplicate_groups
 group_counter=1
 
 for file in "${files[@]}"; do
-  base=$(basename "$file")
-  echo "File: $base" >> "$output_file"
-
+  base=$(basename "$selected_file_original")
   delimiter=$(detect_delimiter "$file")
-  [[ "$delimiter" == $'\t' ]] && delimname="Tabulador" || delimname="$delimiter"
-  echo "Field separator: $delimname" >> "$output_file"
+  [[ "$delimiter" == $'\t' ]] && delimname="Tab" || delimname="$delimiter"
 
-  rows=$(wc -l < "$file")
+  rows=$(awk 'NF' "$file" | tail -n +2 | wc -l)   # skip blank lines, exclude header
   cols=$(head -n 1 "$file" | awk -F"$delimiter" '{print NF}')
-  echo "Rows: $rows" >> "$output_file"
-  echo "Columns: $cols" >> "$output_file"
-  echo "" >> "$output_file"
+
+  {
+    echo "File      : $base"
+    echo "Delimiter : $delimname"
+    echo "Data rows : $rows"
+    echo "Columns   : $cols"
+    echo ""
+  } >> "$output_file"
 
   if [[ "$lines_view" == "H" || "$lines_view" == "B" ]]; then
-    echo "Head ($num_lines):" >> "$output_file"
-    head -n "$num_lines" "$file" >> "$output_file"
+    echo "Head ($num_lines lines):" >> "$output_file"
+    head -n "$((num_lines + 1))" "$file" >> "$output_file"
     echo "" >> "$output_file"
   fi
 
   if [[ "$lines_view" == "T" || "$lines_view" == "B" ]]; then
-    echo "Tail ($num_lines):" >> "$output_file"
-    tail -n "$num_lines" "$file" >> "$output_file"
+    echo "Tail ($num_lines lines):" >> "$output_file"
+    { head -n 1 "$file"; tail -n "$num_lines" "$file"; } >> "$output_file"
     echo "" >> "$output_file"
   fi
 
-  echo "Column type:" >> "$output_file"
+  echo "Column types:" >> "$output_file"
   classify_columns "$file" "$delimiter" >> "$output_file"
 
-  # Calcular hash de contenido del archivo (sin importar nombre)
+  # Hash for duplicate detection
   hash=$(sha256sum "$file" | awk '{print $1}')
+  original_base=$(basename "$selected_file_original")
   if [[ -n "${file_hashes[$hash]}" ]]; then
-    duplicate_groups["$hash"]+=$'\n'"$base"
+    duplicate_groups["$hash"]+=$'\n'"$original_base"
   else
     file_hashes["$hash"]="1"
-    duplicate_groups["$hash"]="$base"
+    duplicate_groups["$hash"]="$original_base"
   fi
 
   echo -e "\n------------------------------------------------------\n" >> "$output_file"
 done
 
-# Comparar con archivos restantes si solo se seleccionó uno
+# Single-file mode: compare hash against all other files in directory
 if [[ "$check_duplicates_single" == true ]]; then
+  local_dir=$(dirname "$selected_file_original")
+  # Hash the normalized copy (CRLF already stripped)
   original_hash=$(sha256sum "$selected_file" | awk '{print $1}')
-  for other_file in "${directory}"/*.csv "${directory}"/*.tsv; do
-    [[ "$other_file" == "$selected_file" ]] && continue
+  for other_file in "$local_dir"/*.csv "$local_dir"/*.tsv; do
+    [[ "$(realpath "$other_file" 2>/dev/null)" == "$(realpath "$selected_file_original" 2>/dev/null)" ]] && continue
     [[ ! -f "$other_file" ]] && continue
-    other_hash=$(sha256sum "$other_file" | awk '{print $1}')
+    # Normalize CRLF before hashing so comparison is fair with the normalized selected file
+    other_hash=$(tr -d '\r' < "$other_file" | sha256sum | awk '{print $1}')
     if [[ "$original_hash" == "$other_hash" ]]; then
       duplicate_groups["$original_hash"]+=$'\n'"$(basename "$other_file")"
     fi
   done
 fi
 
-# Verificar duplicados por contenido
-echo -e "\nDuplicate check (by content):" >> "$output_file"
-dupes_found=0
-for hash in "${!duplicate_groups[@]}"; do
-  group="${duplicate_groups[$hash]}"
-  lines=$(grep -c '^' <<< "$group")
-  if [[ "$lines" -gt 1 ]]; then
-    echo "Duplicate files (group $group_counter):" >> "$output_file"
-    echo "$group" >> "$output_file"
-    echo "" >> "$output_file"
-    ((group_counter++))
-    ((dupes_found++))
-  fi
-done
-[[ "$dupes_found" -eq 0 ]] && echo " No duplicate files" >> "$output_file"
+# Duplicate report
+{
+  echo "DUPLICATE CHECK (by content hash):"
+  dupes_found=0
+  for hash in "${!duplicate_groups[@]}"; do
+    group="${duplicate_groups[$hash]}"
+    member_count=$(grep -c '^' <<< "$group")
+    if [[ "$member_count" -gt 1 ]]; then
+      echo "  Duplicate group $group_counter:"
+      echo "$group" | sed 's/^/    /'
+      echo ""
+      ((group_counter++))
+      ((dupes_found++))
+    fi
+  done
+  [[ "$dupes_found" -eq 0 ]] && echo "  No duplicate files found."
+} >> "$output_file"
 
-# Confirmación final
-echo -e "\n Saving results: $output_file" >> "$output_file"
-
-# Mostrar reporte
-whiptail --title "SCAN REPORT PREVIEW" --scrolltext --msgbox "$(cat "$output_file")" 30 100
+whiptail --title "FILE SCAN REPORT" --scrolltext --msgbox "$(cat "$output_file")" 30 100
