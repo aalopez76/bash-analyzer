@@ -61,16 +61,6 @@ cd bash-analyzer
    * Reports land in `output/` as `.txt`; exported datasets land as `.csv`, `.sql`, `.json`, or `.md`.
    * On exit, `.txt` reports are archived into `history/` automatically.
 
-## Running the test suite
-
-The `tests/` directory contains an integration test suite that mocks `whiptail` to drive the app non-interactively:
-
-```bash
-bash tests/integration_test.sh
-```
-
-It covers the File Scan, Regex Search, and Column Filter flows end to end, plus focused tests for duplicate detection and SQL export.
-
 ## Project layout
 
 ```
