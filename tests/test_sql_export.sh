@@ -2,12 +2,13 @@
 # Quick test for SQL export via format.sh
 set -uo pipefail
 
-PROJ="/mnt/d/GitHub/Projects/Personal/Bash/bash-analyzer"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJ="$(dirname "$SCRIPT_DIR")"
 cd "$PROJ"
 
 # Pre-seed state
-echo "$PROJ" > functions/directory.txt
-echo "$PROJ/data.csv" > functions/selected_file.txt
+echo "$PROJ/data_sets" > functions/directory.txt
+echo "$PROJ/data_sets/data.csv" > functions/selected_file.txt
 
 # Mock queue: 
 #   0: report msgbox (ack) → any value

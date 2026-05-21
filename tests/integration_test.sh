@@ -133,7 +133,7 @@ print_header
 echo -e "${BOLD}▸ PREREQUISITE CHECK${NC}"
 echo "  ─────────────────────────────────────────────"
 
-DATA_CSV="$PROJECT_DIR/data.csv"
+DATA_CSV="$PROJECT_DIR/data_sets/data.csv"
 
 assert_file_exists "data.csv exists in project root" "$DATA_CSV"
 assert_file_not_empty "data.csv has content" "$DATA_CSV"

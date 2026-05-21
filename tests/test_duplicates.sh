@@ -1,16 +1,32 @@
 #!/bin/bash
-# Test: File Scan duplicate detection with data.csv and data_1.csv
+# Test: File Scan duplicate detection.
+# Creates a temp directory with two identical CSVs (data.csv + data_1.csv)
+# and verifies file-scan.sh detects them as duplicates by hash.
 set -uo pipefail
 
-PROJ="/mnt/d/GitHub/Projects/Personal/Bash/bash-analyzer"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJ="$(dirname "$SCRIPT_DIR")"
 cd "$PROJ"
+
+SOURCE_CSV="$PROJ/data_sets/data.csv"
+if [ ! -f "$SOURCE_CSV" ]; then
+  echo "✘ FAIL — source dataset not found at $SOURCE_CSV"
+  exit 1
+fi
 
 echo "=== DUPLICATE DETECTION TEST ==="
 echo ""
 
-# Pre-seed: select data.csv (which lives in the project root alongside data_1.csv)
-echo "$PROJ" > functions/directory.txt
-echo "$PROJ/data.csv" > functions/selected_file.txt
+# Stage two identical CSVs in an isolated temp directory so file-scan.sh
+# can find a duplicate without polluting the repo.
+STAGE_DIR=$(mktemp -d)
+trap 'rm -rf "$STAGE_DIR" "$QUEUE" "$MOCK_DIR" "$PROJ/tests/dup_counter.txt" "$PROJ/tests/dup_test.log"' EXIT
+
+cp "$SOURCE_CSV" "$STAGE_DIR/data.csv"
+cp "$SOURCE_CSV" "$STAGE_DIR/data_1.csv"
+
+echo "$STAGE_DIR" > functions/directory.txt
+echo "$STAGE_DIR/data.csv" > functions/selected_file.txt
 
 # Mock queue for file-scan.sh:
 #   0: radiolist "preview" → "H"
@@ -42,13 +58,11 @@ grep -A 10 "DUPLICATE CHECK" output/scan-report.txt
 echo ""
 if grep -q "data_1.csv" output/scan-report.txt; then
   echo "✔ PASS — data_1.csv detected as duplicate of data.csv"
+  exit 0
 else
   echo "✘ FAIL — data_1.csv NOT detected as duplicate"
   echo ""
   echo "Full report:"
   cat output/scan-report.txt
+  exit 1
 fi
-
-# Cleanup
-rm -f "$QUEUE" "$PROJ/tests/dup_counter.txt" "$PROJ/tests/dup_test.log"
-rm -rf "$MOCK_DIR"
