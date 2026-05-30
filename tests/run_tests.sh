@@ -24,6 +24,7 @@ TESTS=(
   "test_data_quality.sh"
   "test_format.sh"
   "test_search_sort_unique.sh"
+  "test_preflight.sh"
 )
 
 passed=0

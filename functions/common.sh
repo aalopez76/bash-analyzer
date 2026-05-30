@@ -13,6 +13,26 @@ SELECTED_FILE_PATH="$FUNCTIONS_DIR/selected_file.txt"
 
 mkdir -p "$OUTPUT_DIR"
 
+# Verify required external tools are present; abort with a clear message
+# if any are missing. Called once when common.sh is sourced, so every
+# module gets the check for free. Reports ALL missing tools at once.
+require_tools() {
+  local missing=()
+  local t
+  for t in "$@"; do
+    command -v "$t" >/dev/null 2>&1 || missing+=("$t")
+  done
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "ERROR: required tool(s) not found: ${missing[*]}" >&2
+    echo "Install them and try again (see README 'Requirements')." >&2
+    exit 1
+  fi
+}
+
+# Core utilities every module depends on. whiptail is checked separately
+# in app.sh (and replaced by a mock in tests, so it is not required here).
+require_tools awk grep sort uniq head tail wc find sha256sum mktemp tr
+
 # Detect CSV/TSV delimiter by inspecting the second line of a file
 detect_delimiter() {
   local line
