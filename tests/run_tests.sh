@@ -20,6 +20,10 @@ TESTS=(
   "integration_test.sh"
   "test_duplicates.sh"
   "test_sql_export.sh"
+  "test_joiner.sh"
+  "test_data_quality.sh"
+  "test_format.sh"
+  "test_search_sort_unique.sh"
 )
 
 passed=0
