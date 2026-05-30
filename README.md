@@ -48,8 +48,11 @@ cd bash-analyzer
 3. **Run the main tool:**
 
 ```bash
-./app.sh
+./app.sh        # or: make run
 ```
+
+   On startup the app checks that `whiptail` and the core utilities are
+   installed and aborts with a clear message if any are missing.
 
 4. **Select a file:**
    The app opens a built-in file explorer rooted at the available drives. Navigate into any directory and pick the CSV or TSV file you want to analyze — no need to copy files into the project or pass a path.
@@ -62,6 +65,19 @@ cd bash-analyzer
    * Each module shows a preview before saving.
    * Reports land in `output/` as `.txt`; exported datasets land as `.csv`, `.sql`, `.json`, or `.md`.
    * On exit, `.txt` reports are archived into `history/` automatically.
+
+## Running the tests
+
+The suite drives the app non-interactively through a `whiptail` mock, so no
+real `whiptail` is needed and every flow is deterministic:
+
+```bash
+make test            # full suite (preferred)
+bash tests/run_tests.sh   # same thing, without make
+```
+
+Run an individual script directly, e.g. `bash tests/test_joiner.sh`. See
+[`tests/README.md`](tests/README.md) for the full list and how the mock works.
 
 ## Project layout
 
