@@ -5,6 +5,10 @@
 # Nulls, type anomalies, whitespace, duplicate rows
 # ================================
 
+# Strict mode: -u (unset vars) + pipefail (propagate pipe failures).
+# 'errexit' intentionally omitted — see file-scan.sh for rationale.
+set -uo pipefail
+
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 load_selected_file || exit 0

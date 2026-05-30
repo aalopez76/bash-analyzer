@@ -5,6 +5,10 @@
 # SQL-style JOIN between two CSV/TSV files
 # ================================
 
+# Strict mode: -u (unset vars) + pipefail (propagate pipe failures).
+# 'errexit' intentionally omitted — see file-scan.sh for rationale.
+set -uo pipefail
+
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # ---- Load primary file ----

@@ -4,6 +4,10 @@
 # BASH DATA ANALYZER — MAIN SCRIPT
 #======================================
 
+# Strict mode: -u (unset vars) + pipefail (propagate pipe failures).
+# 'errexit' intentionally omitted — see functions/file-scan.sh for rationale.
+set -uo pipefail
+
 command -v whiptail >/dev/null 2>&1 || { echo >&2 "whiptail is not installed. Aborting."; exit 1; }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
