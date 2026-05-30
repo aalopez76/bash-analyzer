@@ -167,7 +167,7 @@ here the phases are the hardening phases, since there are no ML phases.)
 - **Reports/exports at runtime:** `output/` (gitignored), archived to `history/`
   (gitignored) on exit. These are **not** committed.
 - **Audit & plan:** [`docs/AUDIT.md`](docs/AUDIT.md), [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md) (includes an execution-status table).
-- **Example dataset:** [`data_sets/data.csv`](data_sets/data.csv) (51 rows, employee data — used by some tests).
+- **Example dataset:** [`data_sets/data.csv`](data_sets/data.csv) (50 data rows, employee data — used by some tests).
 - **Test fixtures:** [`tests/fixtures/`](tests/fixtures/) (`employees.csv`, `departments.csv`, `quality.csv`, `malformed.csv`).
 
 > **No DVC remote, no MLflow runs, no model registry** — there is nothing of
