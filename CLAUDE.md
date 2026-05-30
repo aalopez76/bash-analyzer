@@ -5,14 +5,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Running the App
 
 ```bash
-./app.sh
+./app.sh        # or: make run
 ```
 
-Requires Bash and `whiptail`. On Windows, run inside WSL. The `output/` and `history/` directories are created automatically.
+Requires Bash and `whiptail`. Runs on Linux and Windows (WSL / Git Bash);
+macOS is not yet supported (see Known limitations below). The `output/` and
+`history/` directories are created automatically.
+
+## Common commands
+
+A `Makefile` wraps the everyday tasks:
+
+```bash
+make            # list targets
+make test       # run the full suite via tests/run_tests.sh (whiptail mock; no real whiptail)
+make lint       # shellcheck app.sh move.sh functions/*.sh tests/*.sh
+make check      # lint + test — this is exactly what CI runs
+make run        # ./app.sh
+```
+
+CI (`.github/workflows/ci.yml`) installs `whiptail` + `shellcheck` on
+`ubuntu-latest` and runs `make check` on every push and pull request.
+The Makefile sets `SHELL := /usr/bin/bash` so recipes work on both Linux
+and Git-for-Windows (a bare `bash` recipe would otherwise be launched via
+cmd.exe and fail).
 
 ## Dependencies
 
-Standard Unix tools: `awk`, `grep`, `sort`, `uniq`, `head`, `tail`, `wc`, `find`, `sha256sum`, `mktemp`, `tr`. The only non-standard dependency is `whiptail` (`apt install whiptail` on Debian/Ubuntu).
+Standard Unix tools: `awk`, `grep`, `sort`, `uniq`, `head`, `tail`, `wc`, `find`, `sha256sum`, `mktemp`, `tr`, `realpath`. The only non-standard dependency is `whiptail` (`apt install whiptail` on Debian/Ubuntu). On startup, `common.sh:require_tools` verifies the core utilities are present (and `app.sh` checks `whiptail`), aborting with a clear message if any are missing.
+
+## Known limitations
+
+- **macOS / BSD:** the code relies on GNU coreutils behaviour (`sha256sum`, `mktemp --suffix`, `realpath`, a GNU `awk` regex flag). Use Linux or WSL.
+- **CSV quoting:** parsing splits on the delimiter directly; quoted fields containing the delimiter (e.g. `"Smith, John"`) are miscounted. A quoting-aware parser is future work.
 
 ## Architecture
 
