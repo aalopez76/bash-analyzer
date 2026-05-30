@@ -2,8 +2,12 @@
 # ============================================================
 # TEST — Dependency preflight (functions/common.sh:require_tools)
 # ============================================================
-# Verifies that sourcing common.sh aborts with a clear message when a
-# required tool is missing, and succeeds when all tools are present.
+# Verifies require_tools(): succeeds when all tools are present and
+# aborts with a clear, naming message when one is missing.
+#
+# Portability note: we exercise the real require_tools function with a
+# bogus tool name in a subshell rather than manipulating PATH with
+# symlinks — symlink creation is unavailable under Git Bash on Windows.
 # ============================================================
 set -uo pipefail
 
@@ -12,37 +16,45 @@ PROJ="$(dirname "$SCRIPT_DIR")"
 cd "$PROJ"
 
 PASS=0; FAIL=0
-ok()  { echo "  ✔ PASS — $1"; ((PASS++)); }
-bad() { echo "  ✘ FAIL — $1"; ((FAIL++)); }
+ok()  { echo "  PASS — $1"; PASS=$((PASS + 1)); }
+bad() { echo "  FAIL — $1"; FAIL=$((FAIL + 1)); }
 
 echo "=== DEPENDENCY PREFLIGHT TEST ==="
 
-# ---------- All tools present: sourcing succeeds ----------
-out=$(bash -c 'source functions/common.sh; echo SOURCED_OK' 2>&1)
+# Sourcing runs the real preflight over the core utilities and defines
+# require_tools(). If a core tool were missing this would abort here.
+# shellcheck source=functions/common.sh
+source functions/common.sh >/dev/null 2>&1
+ok "common.sh sources cleanly (real preflight passed)"
+
+BOGUS="definitely_not_a_real_tool_xyz123"
+
+# Missing tool: run in a subshell so require_tools' exit 1 is contained.
+msg=$( require_tools "$BOGUS" 2>&1 )
 rc=$?
-if [ "$rc" -eq 0 ] && echo "$out" | grep -q "SOURCED_OK"; then
-  ok "sources cleanly when all tools are present"
+[ "$rc" -ne 0 ] && ok "non-zero exit when a tool is missing (rc=$rc)" \
+                || bad "expected non-zero exit, got 0"
+case "$msg" in
+  *"$BOGUS"*) ok "error message names the missing tool" ;;
+  *)          bad "error did not name the missing tool: $msg" ;;
+esac
+
+# All-present: require_tools returns success for tools we know exist.
+if ( require_tools awk grep sort ); then
+  ok "returns success when given present tools"
 else
-  bad "clean source failed (rc=$rc): $out"
+  bad "wrongly failed for present tools"
 fi
 
-# ---------- Missing tool: sourcing aborts with message ----------
-# Shadow 'sha256sum' by giving the subshell a PATH that lacks it.
-# We build a temp bin with only the tools we WANT, omitting sha256sum.
-TMPBIN=$(mktemp -d)
-trap 'rm -rf "$TMPBIN"' EXIT
-for t in bash awk grep sort uniq head tail wc find mktemp tr dirname command env; do
-  src=$(command -v "$t" 2>/dev/null) && ln -sf "$src" "$TMPBIN/$t"
-done
-# Note: sha256sum deliberately NOT linked.
-
-out=$(PATH="$TMPBIN" bash -c 'source functions/common.sh; echo SHOULD_NOT_REACH' 2>&1)
-rc=$?
-if [ "$rc" -ne 0 ]; then ok "non-zero exit when a tool is missing (rc=$rc)"; else bad "expected non-zero exit, got 0"; fi
-if echo "$out" | grep -q "sha256sum"; then ok "error names the missing tool (sha256sum)"; else bad "error did not name the missing tool: $out"; fi
-if echo "$out" | grep -q "SHOULD_NOT_REACH"; then bad "execution continued past the missing-tool check"; else ok "execution aborted before continuing"; fi
+# Reports every missing tool at once.
+msg=$( require_tools "${BOGUS}_a" "${BOGUS}_b" 2>&1 ) || true
+if [[ "$msg" == *"${BOGUS}_a"* && "$msg" == *"${BOGUS}_b"* ]]; then
+  ok "lists every missing tool in one message"
+else
+  bad "did not list all missing tools: $msg"
+fi
 
 echo ""
-echo "=== RESULT  passed=$PASS  failed=$FAIL ==="
+echo "RESULT  passed=$PASS  failed=$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
