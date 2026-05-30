@@ -112,3 +112,35 @@
 | Cierre | T14–T16 | doc | No |
 
 > Las fases 1, 3, 4 y 5 **no tocan la lógica de negocio**. Las fases 2 y 6 sí, pero siempre con la suite de tests como red (por eso van después de la Fase 1 y, para los módulos frágiles, de la Fase 3).
+
+---
+
+## Estado de ejecución (2026-05-29)
+
+Todas las fases acordadas se ejecutaron en la rama `refactor/hardening`. Commits (cronológico):
+
+| Commit | Tarea(s) | Fase |
+|---|---|---|
+| `docs: add technical audit and refactor plan` | AUDIT + PLAN | — |
+| `test: add aggregate test runner` | T2 | 1 |
+| `build: add Makefile (lint/test/run/check) and shellcheck config` | T1, T4 | 1 |
+| `ci: add GitHub Actions workflow (shellcheck + test suite)` | T3 | 1 |
+| `test: cover joiner, data quality, format and search sort/unique` | T7–T10 | 3 |
+| `fix: enable strict mode and validate inputs across modules` | T5, T6 | 2 |
+| `feat(common): add dependency preflight check` | T11 | 4 |
+| `docs: align platform support with actual behavior` | T12, T14 | 5 |
+| `refactor(search): collapse duplicated regex report blocks` | T13 | 6 |
+| `fix(test): make preflight test portable (no symlinks)` | (corrección) | 4 |
+| `docs: update CLAUDE.md to final state` | T15 | cierre |
+
+**Resultado:** suite ampliada de 3 → **8 scripts de test, todos verdes**; CI activa; `set -uo pipefail` en todo el código; preflight de dependencias; portabilidad sincerada; árbol de trabajo limpio.
+
+**Notas sobre el entorno de desarrollo (Git-for-Windows / msys2):**
+- El `Makefile` usa `SHELL := /usr/bin/bash`; sin ello, las recetas `bash` se lanzan vía cmd.exe y fallan con `/c/Program: No such file or directory`.
+- `shellcheck` no está instalado localmente; `make lint` avisa y la CI (ubuntu) ejecuta el linting real.
+- Los tests evitan `ln -s` (symlinks no disponibles en Git Bash).
+
+**Diferido (backlog), según lo acordado:**
+- **M6 — CSV con campos entrecomillados:** documentado como limitación; parser robusto pendiente.
+- **macOS/BSD:** soporte real pendiente (alternativas a `sha256sum`, `mktemp --suffix`, `realpath`, gawk `/i`).
+- **G1–G6:** modo no interactivo/CLI, migración a `bats-core`, hook `pre-commit`, empaquetado, cobertura `kcov`.
