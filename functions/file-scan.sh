@@ -22,11 +22,14 @@ check_duplicates_single=true
 
 classify_columns() {
   local file="$1" delimiter="$2"
-  awk -F"$delimiter" '
-  NR == 1 { for (i = 1; i <= NF; i++) { header[i] = $i; ncols = NF } next }
+  # CSV-quoting-aware field splitting via FPAT (M6); unquote each value so
+  # quoted fields are typed/displayed by their content, not their quotes.
+  awk -v FPAT="$(csv_fpat "$delimiter")" "$AWK_UNQUOTE"'
+  NR == 1 { for (i = 1; i <= NF; i++) { header[i] = unq($i); ncols = NF } next }
   {
     for (i = 1; i <= NF; i++) {
-      if ($i !~ /^-?[0-9]+([.][0-9]+)?([eE][+-]?[0-9]+)?$/) nonnum[i]++
+      v = unq($i)
+      if (v !~ /^-?[0-9]+([.][0-9]+)?([eE][+-]?[0-9]+)?$/) nonnum[i]++
       total[i]++
     }
   }
@@ -76,7 +79,7 @@ for file in "${files[@]}"; do
   [[ "$delimiter" == $'\t' ]] && delimname="Tab" || delimname="$delimiter"
 
   rows=$(awk 'NF' "$file" | tail -n +2 | wc -l)   # skip blank lines, exclude header
-  cols=$(head -n 1 "$file" | awk -F"$delimiter" '{print NF}')
+  cols=$(head -n 1 "$file" | awk -v FPAT="$(csv_fpat "$delimiter")" '{print NF}')
 
   {
     echo "File      : $base"

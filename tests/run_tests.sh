@@ -25,6 +25,7 @@ TESTS=(
   "test_format.sh"
   "test_search_sort_unique.sh"
   "test_preflight.sh"
+  "test_csv_quoting.sh"
 )
 
 passed=0

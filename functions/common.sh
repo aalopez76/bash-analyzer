@@ -46,6 +46,23 @@ detect_delimiter() {
   fi
 }
 
+# Build a gawk FPAT pattern for the given delimiter so fields are split in a
+# CSV-quoting-aware way (resolves M6): a field is either a run of non-delimiter
+# characters, or a double-quoted string that may itself contain the delimiter
+# and escaped quotes (""). Requires gawk. Use it instead of -F:
+#   awk -v FPAT="$(csv_fpat "$delimiter")" '...'
+# The delimiter is only ever , ; or tab — none are special inside a regex
+# bracket expression, so no escaping is needed.
+csv_fpat() {
+  printf '([^%s]*)|("([^"]|"")*")' "$1"
+}
+
+# Strip surrounding double-quotes from a CSV field and unescape "" → " .
+# Defined as a string so modules can inject it into their awk programs:
+#   awk -v FPAT=... "$AWK_UNQUOTE"' { v = unq($1); ... }'
+# shellcheck disable=SC2034  # consumed by modules that source common.sh
+AWK_UNQUOTE='function unq(s){ if (s ~ /^".*"$/){ s=substr(s,2,length(s)-2); gsub(/""/,"\"",s) } return s }'
+
 # Read and validate the currently selected file.
 # Normalizes CRLF → LF (handles Windows-origin files in WSL).
 # Sets global $selected_file and $delimiter on success.

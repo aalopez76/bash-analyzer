@@ -178,8 +178,9 @@ here the phases are the hardening phases, since there are no ML phases.)
 
 ## 4. Current status
 
-**What works:** all 5 modules; full suite **8/8 green**; CI **green on `main`**
-(lint + test); strict-mode + preflight active; CRLF-safe; awk-injection-safe.
+**What works:** all 5 modules; full suite **9/9 green**; CI **green on `main`**
+(lint + test); strict-mode + preflight active; CRLF-safe; awk-injection-safe;
+**CSV-quoting-aware in `file-scan` (M6 pilot)**.
 
 **What is NOT done / known issues / technical debt:**
 - ✅ **Branch merged and pushed (2026-06-02).** `refactor/hardening` was merged
@@ -189,10 +190,15 @@ here the phases are the hardening phases, since there are no ML phases.)
 - 🟡 **macOS / BSD unsupported.** Code relies on GNU behaviour: `sha256sum`,
   `mktemp --suffix`, `realpath`, GNU `awk` regex flag `/i`. On macOS these
   differ (`shasum`, no `--suffix`). README documents this; not yet fixed.
-- 🟡 **CSV quoting not honoured (M6).** Parsing splits on the delimiter
-  directly, so a quoted field containing the delimiter (e.g. `"Smith, John"` in
-  a comma file) is miscounted across **all** modules. This is the biggest
-  correctness limitation. Documented; fix deferred (it's a cross-cutting change).
+- 🟡 **CSV quoting (M6) — pilot done, rollout pending.** A quoting-aware
+  splitter now lives in `common.sh` (`csv_fpat` builds a gawk `FPAT`;
+  `AWK_UNQUOTE` is an injectable awk `unq()` function) and **`file-scan.sh` is
+  routed through it** (commit on `main`; covered by `tests/test_csv_quoting.sh`
+  with `tests/fixtures/quoted.csv`). The remaining four modules
+  (`data-quality`, `search`, `csv-joiner`, `format`) still split naively with
+  `-F"$delimiter"` and miscount quoted delimiters. **Next: migrate them the same
+  way, test-first.** Note: embedded *newlines* inside quoted fields are still
+  out of scope (the row-count idiom is line-based).
 - 🟢 **No non-interactive/CLI mode.** The app is whiptail-only; automation is
   only possible via the test mock.
 - 🟢 **`shellcheck` now installed locally** (winget `koalaman.shellcheck`,
@@ -395,11 +401,16 @@ Ordered by value/risk. Each is a concrete, self-contained task.
 2. ✅ **DONE (2026-06-02) — CI green; shellcheck findings resolved.** First CI
    run failed on ~48 shellcheck warnings; all fixed in `fa6dc90` (genuine fixes
    + justified `# shellcheck disable=`/`source=` directives). CI now green.
-3. **CSV quoting-aware parser (resolves M6).** The biggest correctness gap. ←
-   **now the top open item.**
-   Introduce a single shared awk/helper that respects `"…"` fields and route all
-   modules through it. Add fixtures with quoted delimiters (today they're
-   intentionally avoided). Cross-cutting — do it test-first.
+3. **CSV quoting-aware parser (M6) — PILOT DONE; finish the rollout.** ←
+   **top open item.** The shared helper exists (`common.sh:csv_fpat` +
+   `AWK_UNQUOTE`, gawk `FPAT`) and `file-scan.sh` is migrated, with
+   `tests/test_csv_quoting.sh` + `tests/fixtures/quoted.csv` proving it.
+   **Remaining:** route the other four modules through the helper, test-first,
+   replacing each `awk -F"$delimiter"` with `awk -v FPAT="$(csv_fpat "$delimiter")"`
+   and `unq()`-ing values where they are compared/displayed. Suggested order by
+   risk: `data-quality` → `search` → `format` → `csv-joiner` (joiner is the
+   trickiest: its keys are quoted-field values, so unquote before keying). Add a
+   quoted fixture per module as you go.
 4. **Real macOS/BSD support.** Replace `sha256sum`→`shasum -a 256`,
    `mktemp --suffix`→portable form, audit `realpath` and gawk `/i`. Add macOS to
    the CI matrix in [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
