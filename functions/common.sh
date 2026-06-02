@@ -63,13 +63,17 @@ load_selected_file() {
     return 1
   fi
   # Preserve original path for display in reports
+  # shellcheck disable=SC2034  # consumed by modules that source common.sh
   selected_file_original="$_raw_path"
   # Normalize CRLF → LF into a tmpfile so all modules see clean data
   local _norm
   _norm=$(mktemp --suffix=.csv)
   tr -d '\r' < "$_raw_path" > "$_norm"
   selected_file="$_norm"
+  # Expand $_norm now (it is local and gone by EXIT time), not when signalled.
+  # shellcheck disable=SC2064
   trap "rm -f \"$_norm\"" EXIT
+  # shellcheck disable=SC2034  # consumed by modules that source common.sh
   delimiter=$(detect_delimiter "$selected_file")
   return 0
 }
@@ -81,6 +85,7 @@ load_directory() {
       "Working directory not configured.\nPlease use 'File Search' first." 10 60
     return 1
   fi
+  # shellcheck disable=SC2034  # consumed by modules that source common.sh
   directory=$(< "$DIRECTORY_FILE")
   return 0
 }

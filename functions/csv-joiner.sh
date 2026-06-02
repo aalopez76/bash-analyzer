@@ -9,6 +9,7 @@
 # 'errexit' intentionally omitted — see file-scan.sh for rationale.
 set -uo pipefail
 
+# shellcheck source=functions/common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # ---- Load primary file ----
@@ -30,6 +31,8 @@ secondary_raw=$(navigate_and_select "SELECT SECONDARY FILE" "$start_nav")
 # Normalize CRLF in secondary file (same as primary)
 secondary_norm=$(mktemp --suffix=.csv)
 tr -d '\r' < "$secondary_raw" > "$secondary_norm"
+# Expand $secondary_norm now, not when signalled (intentional).
+# shellcheck disable=SC2064
 trap "rm -f \"$secondary_norm\"" EXIT
 
 secondary_file="$secondary_norm"

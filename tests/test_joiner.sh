@@ -10,7 +10,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJ="$(dirname "$SCRIPT_DIR")"
 FIX="$SCRIPT_DIR/fixtures"
-cd "$PROJ"
+cd "$PROJ" || exit 1
 
 PASS=0; FAIL=0
 ok()   { echo "  ✔ PASS — $1"; ((PASS++)); }

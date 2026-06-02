@@ -10,6 +10,7 @@
 # 'errexit' intentionally omitted — see file-scan.sh for rationale.
 set -uo pipefail
 
+# shellcheck source=functions/common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 load_selected_file || exit 0
@@ -121,10 +122,11 @@ case "$export_action" in
 "1")
   clean_file="$OUTPUT_DIR/clean_result.csv"
 
-  fill_value=$(whiptail --inputbox \
+  if ! fill_value=$(whiptail --inputbox \
     "Replace null/empty values with (leave blank to keep as-is):" \
-    10 70 "NA" 3>&1 1>&2 2>&3)
-  [ $? -ne 0 ] && fill_value="NA"
+    10 70 "NA" 3>&1 1>&2 2>&3); then
+    fill_value="NA"
+  fi
 
   awk -F"$delimiter" -v OFS="$delimiter" -v ncols="$ncols" \
     -v fill="$fill_value" '

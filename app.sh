@@ -19,19 +19,20 @@ mkdir -p "$output_dir"
 source "$functions_dir/common.sh"
 
 # ---- Screen 1: Welcome / confirm ----
-whiptail --title "BASH DATA ANALYZER" \
+if ! whiptail --title "BASH DATA ANALYZER" \
   --yes-button "Select File" --no-button "Cancel" \
   --yesno "Select a CSV or TSV file to begin analysis." \
-  10 60
-[ $? -ne 0 ] && exit 0
+  10 60; then
+  exit 0
+fi
 
 # ---- Screen 2: File explorer (starts at drives list) ----
 selected=$(navigate_and_select "FILE SEARCH" "DRIVES")
 [ -z "$selected" ] && exit 0
 
 # Persist state for child modules
-echo "$(dirname "$selected")" > "$DIRECTORY_FILE"
-echo "$selected"               > "$SELECTED_FILE_PATH"
+dirname "$selected" > "$DIRECTORY_FILE"
+echo "$selected"    > "$SELECTED_FILE_PATH"
 
 active_name=$(basename "$selected")
 

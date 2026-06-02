@@ -22,7 +22,7 @@ selected=$(navigate_and_select "FILE SEARCH" "$start_dir")
 [ -z "$selected" ] && exit 0
 
 # Persist state
-echo "$(dirname "$selected")" > "$DIRECTORY_FILE"
+dirname "$selected" > "$DIRECTORY_FILE"
 echo "$selected" > "$SELECTED_FILE_PATH"
 
 # Confirmation summary

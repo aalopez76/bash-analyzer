@@ -11,7 +11,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJ="$(dirname "$SCRIPT_DIR")"
 FIX="$SCRIPT_DIR/fixtures"
-cd "$PROJ"
+cd "$PROJ" || exit 1
 
 PASS=0; FAIL=0
 ok()  { echo "  ✔ PASS — $1"; ((PASS++)); }
@@ -63,6 +63,8 @@ echo "▸ JSON array export"
 seed
 printf 'ack\n3\nack\n' > "$QUEUE"
 run
+# Test-controlled filenames (no spaces/newlines); ls -t is fine here.
+# shellcheck disable=SC2012
 JSON=$(ls -t output/export_malformed_*.json 2>/dev/null | head -1)
 if [ -n "$JSON" ] && [ -f "$JSON" ]; then
   ok "JSON file generated"
@@ -81,6 +83,8 @@ echo "▸ Markdown table export"
 seed
 printf 'ack\n4\nack\n' > "$QUEUE"
 run
+# Test-controlled filenames (no spaces/newlines); ls -t is fine here.
+# shellcheck disable=SC2012
 MD=$(ls -t output/export_malformed_*.md 2>/dev/null | head -1)
 if [ -n "$MD" ] && [ -f "$MD" ]; then
   ok "Markdown file generated"

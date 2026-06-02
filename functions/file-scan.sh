@@ -11,6 +11,7 @@
 # cancel, grep no-match, post-decrement arithmetic) that -e would abort.
 set -uo pipefail
 
+# shellcheck source=functions/common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 output_file="$OUTPUT_DIR/scan-report.txt"
@@ -86,15 +87,19 @@ for file in "${files[@]}"; do
   } >> "$output_file"
 
   if [[ "$lines_view" == "H" || "$lines_view" == "B" ]]; then
-    echo "Head ($num_lines lines):" >> "$output_file"
-    head -n "$((num_lines + 1))" "$file" >> "$output_file"
-    echo "" >> "$output_file"
+    {
+      echo "Head ($num_lines lines):"
+      head -n "$((num_lines + 1))" "$file"
+      echo ""
+    } >> "$output_file"
   fi
 
   if [[ "$lines_view" == "T" || "$lines_view" == "B" ]]; then
-    echo "Tail ($num_lines lines):" >> "$output_file"
-    { head -n 1 "$file"; tail -n "$num_lines" "$file"; } >> "$output_file"
-    echo "" >> "$output_file"
+    {
+      echo "Tail ($num_lines lines):"
+      { head -n 1 "$file"; tail -n "$num_lines" "$file"; }
+      echo ""
+    } >> "$output_file"
   fi
 
   echo "Column types:" >> "$output_file"
@@ -138,6 +143,8 @@ fi
     member_count=$(grep -c '^' <<< "$group")
     if [[ "$member_count" -gt 1 ]]; then
       echo "  Duplicate group $group_counter:"
+      # sed indents every line; no clean parameter-expansion equivalent.
+      # shellcheck disable=SC2001
       echo "$group" | sed 's/^/    /'
       echo ""
       ((group_counter++))

@@ -4,7 +4,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJ="$(dirname "$SCRIPT_DIR")"
-cd "$PROJ"
+cd "$PROJ" || exit 1
 
 # Pre-seed state
 echo "$PROJ/data_sets" > functions/directory.txt
@@ -32,7 +32,7 @@ export MOCK_WHIPTAIL_RESPONSES="$QUEUE"
 export MOCK_WHIPTAIL_LOG="$PROJ/tests/sql_test.log"
 export MOCK_WHIPTAIL_COUNTER="$PROJ/tests/sql_counter.txt"
 echo "0" > "$MOCK_WHIPTAIL_COUNTER"
-> "$MOCK_WHIPTAIL_LOG"
+: > "$MOCK_WHIPTAIL_LOG"
 
 # Run format.sh with mock
 PATH="$MOCK_DIR:$PATH" bash functions/format.sh 2>&1
@@ -43,6 +43,8 @@ echo "SQL EXPORT TEST RESULTS"
 echo "=========================================="
 
 # Find the SQL file
+# Test-controlled filenames (no spaces/newlines); ls -t is fine here.
+# shellcheck disable=SC2012
 sql_file=$(ls -t output/export_data_*.sql 2>/dev/null | head -1)
 if [ -n "$sql_file" ] && [ -f "$sql_file" ]; then
   echo "✔ SQL file created: $sql_file"

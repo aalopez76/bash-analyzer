@@ -1,11 +1,11 @@
 #!/bin/bash
-cd /mnt/d/GitHub/Projects/Personal/Bash/bash-analyzer
+cd /mnt/d/GitHub/Projects/Personal/Bash/bash-analyzer || exit 1
 
 echo "=== HASH COMPARISON ==="
 echo "--- Hash of ORIGINAL data.csv (with CRLF) ---"
 sha256sum data.csv
 
-echo "--- Hash of NORMALIZED data.csv (after tr -d \\r) ---"
+printf '%s\n' "--- Hash of NORMALIZED data.csv (after tr -d \\r) ---"
 tr -d '\r' < data.csv | sha256sum
 
 echo ""

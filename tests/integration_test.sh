@@ -110,7 +110,7 @@ setup_mock() {
 
   # Reset state
   echo "0" > "$MOCK_WHIPTAIL_COUNTER"
-  > "$MOCK_WHIPTAIL_LOG"
+ : > "$MOCK_WHIPTAIL_LOG"
 }
 
 teardown_mock() {
@@ -121,7 +121,7 @@ teardown_mock() {
 # ---- Pre-seed the selected file state ----
 seed_selected_file() {
   local csv_path="$1"
-  echo "$(dirname "$csv_path")" > "$FUNCTIONS_DIR/directory.txt"
+  dirname "$csv_path" > "$FUNCTIONS_DIR/directory.txt"
   echo "$csv_path" > "$FUNCTIONS_DIR/selected_file.txt"
 }
 
@@ -177,7 +177,7 @@ EOF
 
 setup_mock "$QUEUE_T1"
 
-SCAN_OUTPUT=$( PATH="$MOCK_BIN:$PATH" bash "$FUNCTIONS_DIR/file-scan.sh" 2>&1 ) || true
+PATH="$MOCK_BIN:$PATH" bash "$FUNCTIONS_DIR/file-scan.sh" >/dev/null 2>&1
 SCAN_EXIT=$?
 
 assert_exit_code "file-scan.sh exits cleanly" "$SCAN_EXIT" "0"
@@ -194,7 +194,7 @@ assert_contains "Report has duplicate check" "$SCAN_REPORT" "DUPLICATE CHECK"
 
 echo ""
 echo -e "  ${YELLOW}Mock whiptail log (Test 1):${NC}"
-cat "$MOCK_WHIPTAIL_LOG" | sed 's/^/    /'
+sed 's/^/    /' "$MOCK_WHIPTAIL_LOG"
 
 echo ""
 echo -e "  ${YELLOW}scan-report.txt (first 15 lines):${NC}"
@@ -229,7 +229,7 @@ EOF
 
 setup_mock "$QUEUE_T2"
 
-SEARCH_OUTPUT=$( PATH="$MOCK_BIN:$PATH" bash "$FUNCTIONS_DIR/search.sh" 2>&1 ) || true
+PATH="$MOCK_BIN:$PATH" bash "$FUNCTIONS_DIR/search.sh" >/dev/null 2>&1
 SEARCH_EXIT=$?
 
 assert_exit_code "search.sh (regex) exits cleanly" "$SEARCH_EXIT" "0"
@@ -248,7 +248,7 @@ echo -e "  ${YELLOW}Expected 'Marketing' matches in data.csv:${NC} $EXPECTED_MAT
 
 echo ""
 echo -e "  ${YELLOW}Mock whiptail log (Test 2):${NC}"
-cat "$MOCK_WHIPTAIL_LOG" | sed 's/^/    /'
+sed 's/^/    /' "$MOCK_WHIPTAIL_LOG"
 
 rm -f "$QUEUE_T2"
 teardown_mock
@@ -284,7 +284,7 @@ EOF
 
 setup_mock "$QUEUE_T3"
 
-REGEX_OUTPUT=$( PATH="$MOCK_BIN:$PATH" bash "$FUNCTIONS_DIR/search.sh" 2>&1 ) || true
+PATH="$MOCK_BIN:$PATH" bash "$FUNCTIONS_DIR/search.sh" >/dev/null 2>&1
 REGEX_EXIT=$?
 
 assert_exit_code "search.sh (column regex) exits cleanly" "$REGEX_EXIT" "0"
@@ -305,7 +305,7 @@ fi
 
 echo ""
 echo -e "  ${YELLOW}Mock whiptail log (Test 3):${NC}"
-cat "$MOCK_WHIPTAIL_LOG" | sed 's/^/    /'
+sed 's/^/    /' "$MOCK_WHIPTAIL_LOG"
 
 rm -f "$QUEUE_T3"
 teardown_mock
@@ -319,10 +319,14 @@ echo "  ────────────────────────
 
 echo -e "  ${YELLOW}Inspecting search.sh line 192 for command injection risk:${NC}"
 VULN_LINE=$(sed -n '189,192p' "$FUNCTIONS_DIR/search.sh")
+# sed indents each line of a multi-line snippet; no clean param-expansion form.
+# shellcheck disable=SC2001
 echo "$VULN_LINE" | sed 's/^/    /'
 echo ""
 
 ((TOTAL++))
+# Literal '$condition' is the search pattern, not a variable to expand.
+# shellcheck disable=SC2016
 if echo "$VULN_LINE" | grep -q 'awk.*"\$condition'; then
   echo -e "  ${RED}✘ FAIL${NC} — Column Filter interpolates user input as AWK code (injection risk)"
   ((FAIL++))

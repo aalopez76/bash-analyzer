@@ -6,7 +6,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJ="$(dirname "$SCRIPT_DIR")"
-cd "$PROJ"
+cd "$PROJ" || exit 1
 
 SOURCE_CSV="$PROJ/data_sets/data.csv"
 if [ ! -f "$SOURCE_CSV" ]; then
@@ -47,7 +47,7 @@ export MOCK_WHIPTAIL_RESPONSES="$QUEUE"
 export MOCK_WHIPTAIL_LOG="$PROJ/tests/dup_test.log"
 export MOCK_WHIPTAIL_COUNTER="$PROJ/tests/dup_counter.txt"
 echo "0" > "$MOCK_WHIPTAIL_COUNTER"
-> "$MOCK_WHIPTAIL_LOG"
+: > "$MOCK_WHIPTAIL_LOG"
 
 PATH="$MOCK_DIR:$PATH" bash functions/file-scan.sh 2>&1
 

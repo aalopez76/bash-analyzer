@@ -13,7 +13,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJ="$(dirname "$SCRIPT_DIR")"
-cd "$PROJ"
+cd "$PROJ" || exit 1
 
 PASS=0; FAIL=0
 ok()  { echo "  PASS — $1"; PASS=$((PASS + 1)); }
@@ -32,8 +32,11 @@ BOGUS="definitely_not_a_real_tool_xyz123"
 # Missing tool: run in a subshell so require_tools' exit 1 is contained.
 msg=$( require_tools "$BOGUS" 2>&1 )
 rc=$?
-[ "$rc" -ne 0 ] && ok "non-zero exit when a tool is missing (rc=$rc)" \
-                || bad "expected non-zero exit, got 0"
+if [ "$rc" -ne 0 ]; then
+  ok "non-zero exit when a tool is missing (rc=$rc)"
+else
+  bad "expected non-zero exit, got 0"
+fi
 case "$msg" in
   *"$BOGUS"*) ok "error message names the missing tool" ;;
   *)          bad "error did not name the missing tool: $msg" ;;

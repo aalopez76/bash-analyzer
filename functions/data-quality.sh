@@ -9,6 +9,7 @@
 # 'errexit' intentionally omitted — see file-scan.sh for rationale.
 set -uo pipefail
 
+# shellcheck source=functions/common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 load_selected_file || exit 0
