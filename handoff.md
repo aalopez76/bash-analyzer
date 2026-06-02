@@ -180,7 +180,7 @@ here the phases are the hardening phases, since there are no ML phases.)
 
 **What works:** all 5 modules; full suite **9/9 green**; CI **green on `main`**
 (lint + test); strict-mode + preflight active; CRLF-safe; awk-injection-safe;
-**CSV-quoting-aware in `file-scan` + `data-quality` (M6 rollout in progress)**.
+**CSV-quoting-aware across all 5 modules (M6 complete)**.
 
 **What is NOT done / known issues / technical debt:**
 - ✅ **Branch merged and pushed (2026-06-02).** `refactor/hardening` was merged
@@ -190,16 +190,17 @@ here the phases are the hardening phases, since there are no ML phases.)
 - 🟡 **macOS / BSD unsupported.** Code relies on GNU behaviour: `sha256sum`,
   `mktemp --suffix`, `realpath`, GNU `awk` regex flag `/i`. On macOS these
   differ (`shasum`, no `--suffix`). README documents this; not yet fixed.
-- 🟡 **CSV quoting (M6) — rollout in progress (2/5 modules).** A quoting-aware
+- ✅ **CSV quoting (M6) — COMPLETE (all 5 modules, 2026-06-02).** A quoting-aware
   splitter lives in `common.sh` (`csv_fpat` builds a gawk `FPAT`; `AWK_UNQUOTE`
-  is an injectable awk `unq()` function). **Migrated:** `file-scan.sh` and
-  `data-quality.sh` (both covered by `tests/test_csv_quoting.sh` /
-  `tests/fixtures/quoted.csv`). **Still naive (`-F"$delimiter"`):** `search.sh`,
-  `format.sh`, `csv-joiner.sh` — they miscount quoted delimiters. **Next:
-  migrate them the same way, test-first** (suggested order `search → format →
-  csv-joiner`; joiner is trickiest — unquote field values before using them as
-  JOIN keys). Note: embedded *newlines* inside quoted fields remain out of scope
-  (the row-count idiom is line-based).
+  is an injectable awk `unq()` function). All modules now split fields with
+  `-v FPAT="$(csv_fpat "$delimiter")"` (or `patsplit()` in `csv-joiner.sh`, which
+  uses per-file `split()` rather than `FS`) and `unq()` values where they are
+  compared/displayed; JOIN keys are unquoted so a quoted `"30"` matches `30`.
+  Covered by `tests/test_csv_quoting.sh` (23 assertions across all 5 modules)
+  with fixtures `quoted.csv`, `qjoin_left.csv`, `qjoin_right.csv`. **Still out of
+  scope:** embedded *newlines* inside quoted fields (the row-count and
+  duplicate-detection idioms are line-based); the joiner still emits comma-CSV
+  regardless of input delimiter (a pre-existing, separate concern).
 - 🟢 **No non-interactive/CLI mode.** The app is whiptail-only; automation is
   only possible via the test mock.
 - 🟢 **`shellcheck` now installed locally** (winget `koalaman.shellcheck`,
@@ -402,16 +403,10 @@ Ordered by value/risk. Each is a concrete, self-contained task.
 2. ✅ **DONE (2026-06-02) — CI green; shellcheck findings resolved.** First CI
    run failed on ~48 shellcheck warnings; all fixed in `fa6dc90` (genuine fixes
    + justified `# shellcheck disable=`/`source=` directives). CI now green.
-3. **CSV quoting-aware parser (M6) — 2/5 DONE; finish the rollout.** ←
-   **top open item.** The shared helper exists (`common.sh:csv_fpat` +
-   `AWK_UNQUOTE`, gawk `FPAT`); `file-scan.sh` and `data-quality.sh` are
-   migrated, both proven by `tests/test_csv_quoting.sh` +
-   `tests/fixtures/quoted.csv`. **Remaining (`search` → `format` →
-   `csv-joiner`):** replace each `awk -F"$delimiter"` with
-   `awk -v FPAT="$(csv_fpat "$delimiter")"` (+ inject `"$AWK_UNQUOTE"`) and
-   `unq()` values where compared/displayed. `csv-joiner` is the trickiest: its
-   keys are quoted-field values, so unquote before keying. Extend the M6 test
-   with a part per module as you go.
+3. ✅ **DONE (2026-06-02) — CSV quoting-aware parser (M6), all 5 modules.**
+   Shared helper (`common.sh:csv_fpat` + `AWK_UNQUOTE`); every module migrated
+   (`csv-joiner` via `patsplit()`); 23 assertions in `tests/test_csv_quoting.sh`.
+   The next biggest correctness item is now **#4 (macOS/BSD)**.
 4. **Real macOS/BSD support.** Replace `sha256sum`→`shasum -a 256`,
    `mktemp --suffix`→portable form, audit `realpath` and gawk `/i`. Add macOS to
    the CI matrix in [`.github/workflows/ci.yml`](.github/workflows/ci.yml).

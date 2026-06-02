@@ -13,8 +13,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 load_selected_file || exit 0
 
-# Build column options for menus
-IFS="$delimiter" read -ra headers <<< "$(head -n 1 "$selected_file")"
+# Build column options for menus (CSV-quoting-aware header parse, M6)
+mapfile -t headers < <(head -n 1 "$selected_file" \
+  | awk -v FPAT="$(csv_fpat "$delimiter")" "$AWK_UNQUOTE"'{ for (i = 1; i <= NF; i++) print unq($i) }')
 options=()
 for i in "${!headers[@]}"; do
   options+=("$((i+1))" "${headers[$i]}")
@@ -102,15 +103,15 @@ case "$ACTION" in
       match_lines=$(tail -n +2 "$selected_file" | grep -Ei "$regex")
       ;;
     "2")
-      match_lines=$(awk -F"$delimiter" -v idx="$col_index" -v re="$regex" \
-        'NR > 1 && $idx ~ re' "$selected_file")
+      match_lines=$(awk -v FPAT="$(csv_fpat "$delimiter")" -v idx="$col_index" -v re="$regex" "$AWK_UNQUOTE"'
+        NR > 1 { if (unq($idx) ~ re) print }' "$selected_file")
       ;;
     "3")
-      match_lines=$(awk -F"$delimiter" -v col_list="$col_list" -v re="$regex" '
+      match_lines=$(awk -v FPAT="$(csv_fpat "$delimiter")" -v col_list="$col_list" -v re="$regex" "$AWK_UNQUOTE"'
         BEGIN { split(col_list, cols, " ") }
         NR > 1 {
           for (c in cols) {
-            if ($cols[c] ~ re) { print; break }
+            if (unq($cols[c]) ~ re) { print; break }
           }
         }
       ' "$selected_file")
@@ -176,11 +177,12 @@ case "$ACTION" in
 
     condition_desc+="${headers[$((col_index-1))]} $operator \"$value\"; "
 
-    # Safe AWK: pass user input as variables, never interpolate as code
-    awk -F"$delimiter" -v idx="$col_index" -v op="$operator" -v val="$value" '
+    # Safe AWK: pass user input as variables, never interpolate as code.
+    # FPAT + unq() make the field comparison CSV-quoting-aware (M6).
+    awk -v FPAT="$(csv_fpat "$delimiter")" -v idx="$col_index" -v op="$operator" -v val="$value" "$AWK_UNQUOTE"'
       NR == 1 { print; next }
       {
-        field = $idx
+        field = unq($idx)
         if      (op == "==") result = (field == val)
         else if (op == "!=") result = (field != val)
         else if (op == ">")  result = (field+0 >  val+0)
@@ -238,22 +240,42 @@ case "$ACTION" in
     sort_desc+=", ${headers[$((col-1))]} (#$col)"
   done
 
+  # Build the sort keys against DECORATED positions (1..N), not the original
+  # column indices: we prefix each row with its sort-key values below so the
+  # physical sort is CSV-quoting-aware (M6) instead of relying on a
+  # delimiter-splitting `sort -t`.
   sort_args=()
+  pos=1
   for c in "${sort_cols[@]}"; do
-    # Detect if column is numeric to sort correctly
-    is_num=$(awk -F"$delimiter" -v idx="$c" '
-      NR>1 && NF && $idx !~ /^[[:space:]]*$/ {
-        if ($idx !~ /^-?[0-9]+([.][0-9]+)?$/) { print "no"; exit }
+    # Detect if column is numeric to sort correctly (quoting-aware)
+    is_num=$(awk -v FPAT="$(csv_fpat "$delimiter")" -v idx="$c" "$AWK_UNQUOTE"'
+      NR>1 && NF && unq($idx) !~ /^[[:space:]]*$/ {
+        if (unq($idx) !~ /^-?[0-9]+([.][0-9]+)?$/) { print "no"; exit }
       }
       END { print "yes" }' "$selected_file")
     if [[ "$is_num" == "yes" ]]; then
-      sort_args+=("-k${c},${c}n")
+      sort_args+=("-k${pos},${pos}n")
     else
-      sort_args+=("-k${c},${c}")
+      sort_args+=("-k${pos},${pos}")
     fi
+    pos=$((pos + 1))
   done
 
-  sorted_data=$(awk 'NR>1 && NF' "$selected_file" | sort -t"$delimiter" "${sort_args[@]}")
+  # Decorate–sort–undecorate: prefix each data row with its (unquoted) sort
+  # keys separated by SOH (\x01, assumed absent from the data), sort on those
+  # decorated positions, then strip the prefix. This keeps sorting correct even
+  # when a sort column is a quoted field containing the delimiter.
+  sep=$'\x01'
+  nkeys=${#sort_cols[@]}
+  sorted_data=$(awk -v FPAT="$(csv_fpat "$delimiter")" -v sep="$sep" -v cols="${sort_cols[*]}" "$AWK_UNQUOTE"'
+      NR>1 && NF {
+        n = split(cols, ca, " ")
+        pre = ""
+        for (k = 1; k <= n; k++) pre = pre unq($ca[k]) sep
+        print pre $0
+      }' "$selected_file" \
+    | sort -t"$sep" "${sort_args[@]}" \
+    | cut -d"$sep" -f"$((nkeys + 1))-")
   if [ -z "$sorted_data" ]; then result_count=0; else result_count=$(echo "$sorted_data" | wc -l); fi
 
   {
@@ -283,8 +305,8 @@ case "$ACTION" in
   col_index=$(select_column)
   [ -z "$col_index" ] && exit 0
 
-  unique_values=$(awk -F"$delimiter" -v idx="$col_index" \
-    'NR > 1 && $idx ~ /[^[:space:]]/ { gsub(/^[ \t]+|[ \t]+$/, "", $idx); print $idx }' \
+  unique_values=$(awk -v FPAT="$(csv_fpat "$delimiter")" -v idx="$col_index" "$AWK_UNQUOTE"'
+    NR > 1 { v = unq($idx); gsub(/^[ \t]+|[ \t]+$/, "", v); if (v ~ /[^[:space:]]/) print v }' \
     "$selected_file" | sort | uniq)
   if [ -z "$unique_values" ]; then unique_count=0; else unique_count=$(echo "$unique_values" | wc -l); fi
 

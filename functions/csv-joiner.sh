@@ -18,7 +18,9 @@ primary_file="$selected_file"
 primary_delimiter="$delimiter"
 primary_file_original="$selected_file_original"
 
-IFS="$primary_delimiter" read -ra primary_headers <<< "$(head -n 1 "$primary_file")"
+# CSV-quoting-aware header parse (M6)
+mapfile -t primary_headers < <(head -n 1 "$primary_file" \
+  | awk -v FPAT="$(csv_fpat "$primary_delimiter")" "$AWK_UNQUOTE"'{ for (i = 1; i <= NF; i++) print unq($i) }')
 primary_ncols="${#primary_headers[@]}"
 
 # ---- Select secondary file using shared navigator ----
@@ -37,7 +39,9 @@ trap "rm -f \"$secondary_norm\"" EXIT
 
 secondary_file="$secondary_norm"
 secondary_delimiter=$(detect_delimiter "$secondary_file")
-IFS="$secondary_delimiter" read -ra secondary_headers <<< "$(head -n 1 "$secondary_file")"
+# CSV-quoting-aware header parse (M6)
+mapfile -t secondary_headers < <(head -n 1 "$secondary_file" \
+  | awk -v FPAT="$(csv_fpat "$secondary_delimiter")" "$AWK_UNQUOTE"'{ for (i = 1; i <= NF; i++) print unq($i) }')
 secondary_ncols="${#secondary_headers[@]}"
 
 # ---- Select JOIN type ----
@@ -78,21 +82,24 @@ join_report="$OUTPUT_DIR/join_result.txt"
 
 awk -v pk="$primary_key" -v sk="$secondary_key" \
     -v jtype="$join_type" \
-    -v pdelim="$primary_delimiter" -v sdelim="$secondary_delimiter" \
+    -v pfpat="$(csv_fpat "$primary_delimiter")" -v sfpat="$(csv_fpat "$secondary_delimiter")" \
     -v pncols="$primary_ncols" -v sncols="$secondary_ncols" \
-    -v pfile="$primary_file" '
+    -v pfile="$primary_file" "$AWK_UNQUOTE"'
 BEGIN { OFS = "," }
 
 # --- Load primary file ---
+# patsplit() is the function form of FPAT: CSV-quoting-aware field splitting
+# (M6). Keys are unquoted so a quoted "30" matches an unquoted 30; data field
+# values keep their original quoting in the output.
 FILENAME == pfile {
-  n = split($0, f, pdelim)
+  n = patsplit($0, f, pfpat)
   if (FNR == 1) {
     # Build header (all primary columns)
-    p_header = f[1]
-    for (i = 2; i <= n; i++) p_header = p_header "," f[i]
+    p_header = unq(f[1])
+    for (i = 2; i <= n; i++) p_header = p_header "," unq(f[i])
     next
   }
-  key = f[pk]; gsub(/^[ \t]+|[ \t]+$/, "", key)
+  key = unq(f[pk]); gsub(/^[ \t]+|[ \t]+$/, "", key)
   row = f[1]
   for (i = 2; i <= n; i++) row = row "," f[i]
   p_rows[key] = (p_rows[key] != "") ? p_rows[key] SUBSEP row : row
@@ -102,16 +109,16 @@ FILENAME == pfile {
 
 # --- Load secondary file ---
 {
-  n = split($0, f, sdelim)
+  n = patsplit($0, f, sfpat)
   if (FNR == 1) {
     # Build secondary header excluding the key column
     s_header = ""
     for (i = 1; i <= n; i++) {
-      if (i != sk) s_header = s_header (s_header != "" ? "," : "") f[i]
+      if (i != sk) s_header = s_header (s_header != "" ? "," : "") unq(f[i])
     }
     next
   }
-  key = f[sk]; gsub(/^[ \t]+|[ \t]+$/, "", key)
+  key = unq(f[sk]); gsub(/^[ \t]+|[ \t]+$/, "", key)
   row = ""
   for (i = 1; i <= n; i++) {
     if (i != sk) row = row (row != "" ? "," : "") f[i]

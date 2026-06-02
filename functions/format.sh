@@ -17,12 +17,14 @@ load_selected_file || exit 0
 
 report_file="$OUTPUT_DIR/format-report.txt"
 
-IFS="$delimiter" read -ra headers <<< "$(head -n 1 "$selected_file")"
+# CSV-quoting-aware header parse (M6)
+mapfile -t headers < <(head -n 1 "$selected_file" \
+  | awk -v FPAT="$(csv_fpat "$delimiter")" "$AWK_UNQUOTE"'{ for (i = 1; i <= NF; i++) print unq($i) }')
 ncols="${#headers[@]}"
 total_rows=$(awk 'NF' "$selected_file" | tail -n +2 | wc -l)
 
-# ---- Structural integrity check ----
-bad_rows=$(awk -F"$delimiter" -v expected="$ncols" '
+# ---- Structural integrity check (quoting-aware NF) ----
+bad_rows=$(awk -v FPAT="$(csv_fpat "$delimiter")" -v expected="$ncols" '
   NR == 1 { next }
   NF == 0  { next }
   NF != expected { printf "  Row %d: found %d columns (expected %d)\n", NR, NF, expected }
@@ -30,12 +32,12 @@ bad_rows=$(awk -F"$delimiter" -v expected="$ncols" '
 bad_count=$(echo "$bad_rows" | grep -c '.' 2>/dev/null || echo 0)
 [ -z "$bad_rows" ] && bad_count=0
 
-# ---- Type inference per column ----
-type_inference=$(awk -F"$delimiter" -v ncols="$ncols" '
+# ---- Type inference per column (quoting-aware) ----
+type_inference=$(awk -v FPAT="$(csv_fpat "$delimiter")" -v ncols="$ncols" "$AWK_UNQUOTE"'
 NR == 1 { next }
 {
   for (i = 1; i <= ncols; i++) {
-    val = $i; gsub(/^[ \t]+|[ \t]+$/, "", val)
+    val = unq($i); gsub(/^[ \t]+|[ \t]+$/, "", val)
     if (val == "" || val ~ /^(NA|N\/A|null|NULL|None)$/) {
       nulls[i]++
     } else {
@@ -128,13 +130,15 @@ case "$export_action" in
     fill_value="NA"
   fi
 
-  awk -F"$delimiter" -v OFS="$delimiter" -v ncols="$ncols" \
-    -v fill="$fill_value" '
+  awk -v FPAT="$(csv_fpat "$delimiter")" -v OFS="$delimiter" -v ncols="$ncols" \
+    -v fill="$fill_value" "$AWK_UNQUOTE"'
   NR == 1 { print; next }
-  NF != ncols { next }           # remove malformed rows
+  NF != ncols { next }           # remove malformed rows (quoting-aware NF)
   {
+    # Only null/empty cells are rewritten; non-null fields keep their original
+    # text (including any surrounding quotes), so quoted values survive intact.
     for (i = 1; i <= NF; i++) {
-      val = $i; gsub(/^[ \t]+|[ \t]+$/, "", val)
+      val = unq($i); gsub(/^[ \t]+|[ \t]+$/, "", val)
       if (val == "" || val ~ /^(NA|N\/A|null|NULL|None)$/) $i = fill
     }
     print
@@ -158,17 +162,17 @@ case "$export_action" in
   timestamp=$(date +%Y%m%d_%H%M%S)
   sql_file="$OUTPUT_DIR/export_${base_name}_${timestamp}.sql"
 
-  awk -F"$delimiter" -v tbl="$table_name" '
+  awk -v FPAT="$(csv_fpat "$delimiter")" -v tbl="$table_name" "$AWK_UNQUOTE"'
   NR == 1 {
     ncols = NF
     cols = ""
-    for (i = 1; i <= NF; i++) cols = cols (i > 1 ? ", " : "") $i
+    for (i = 1; i <= NF; i++) cols = cols (i > 1 ? ", " : "") unq($i)
     next
   }
   {
     vals = ""
     for (i = 1; i <= ncols; i++) {
-      v = (i <= NF) ? $i : ""
+      v = (i <= NF) ? unq($i) : ""
       gsub(/^[ \t]+|[ \t]+$/, "", v)
       if (v ~ /^-?[0-9]+([.][0-9]+)?([eE][+-]?[0-9]+)?$/) {
         vals = vals (i > 1 ? ", " : "") v
@@ -195,10 +199,10 @@ case "$export_action" in
   timestamp=$(date +%Y%m%d_%H%M%S)
   json_file="$OUTPUT_DIR/export_${base_name}_${timestamp}.json"
 
-  awk -F"$delimiter" '
+  awk -v FPAT="$(csv_fpat "$delimiter")" "$AWK_UNQUOTE"'
   NR == 1 {
     ncols = NF
-    for (i = 1; i <= NF; i++) headers[i] = $i
+    for (i = 1; i <= NF; i++) headers[i] = unq($i)
     print "["
     next
   }
@@ -206,7 +210,7 @@ case "$export_action" in
     if (prev != "") print prev ","
     obj = "  {"
     for (i = 1; i <= ncols; i++) {
-      v = (i <= NF) ? $i : ""
+      v = (i <= NF) ? unq($i) : ""
       gsub(/^[ \t]+|[ \t]+$/, "", v)
       gsub(/\\/, "\\\\", v)
       gsub(/"/, "\\\"", v)
@@ -238,11 +242,11 @@ case "$export_action" in
   timestamp=$(date +%Y%m%d_%H%M%S)
   md_file="$OUTPUT_DIR/export_${base_name}_${timestamp}.md"
 
-  awk -F"$delimiter" '
+  awk -v FPAT="$(csv_fpat "$delimiter")" "$AWK_UNQUOTE"'
   NR == 1 {
     ncols = NF
     printf "|"
-    for (i = 1; i <= NF; i++) printf " %s |", $i
+    for (i = 1; i <= NF; i++) printf " %s |", unq($i)
     print ""
     printf "|"
     for (i = 1; i <= NF; i++) printf " --- |"
@@ -252,7 +256,7 @@ case "$export_action" in
   {
     printf "|"
     for (i = 1; i <= ncols; i++) {
-      v = (i <= NF) ? $i : ""
+      v = (i <= NF) ? unq($i) : ""
       gsub(/\|/, "\\|", v)
       printf " %s |", v
     }
