@@ -200,9 +200,8 @@ here the phases are the hardening phases, since there are no ML phases.)
   CI as the source of truth. The binary lives under
   `…/WinGet/Packages/koalaman.shellcheck_*/shellcheck.exe` (not on the Git Bash
   PATH unless you re-source the profile).
-- 🟢 **`tests/debug_hash.sh`** is a leftover debug helper with a hardcoded path
-  (`/mnt/d/.../Bash/bash-analyzer`, not this `Bash - copia` checkout) and is not
-  in the `run_tests.sh` suite. Lint-clean now, but a candidate for deletion.
+- ✅ **`tests/debug_hash.sh` deleted (2026-06-02).** It was a leftover debug
+  helper with a hardcoded path, not part of the `run_tests.sh` suite.
 
 "Model limitations" → **N/A** (no model).
 

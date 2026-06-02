@@ -111,3 +111,13 @@ Sourced by every module. Provides:
 **CSV Joiner JOIN logic**: implemented in a single two-pass AWK program. Primary and secondary files are loaded into associative arrays keyed by the join column (string comparison). Supports INNER, LEFT, RIGHT, FULL OUTER. The secondary key column is excluded from the output to avoid duplication.
 
 **Post-JOIN analysis** (`csv-joiner.sh`): writes `join_result.csv` path to `selected_file.txt` before spawning sub-modules, then restores the original selected file path afterward.
+
+## End of Session
+
+Before ending a significant work session:
+
+- Summarize completed work.
+- Update handoff.md.
+- Record pending tasks.
+- Record recommended next actions.
+
