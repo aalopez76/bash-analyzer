@@ -7,6 +7,15 @@
 > **Last updated:** 2026-06-02 · **Branch of record:** `main` (the
 > `refactor/hardening` work has been merged and pushed; CI is green).
 
+### Related resources
+
+- **Portfolio page (public):** https://aalopez76.github.io/projects/bash_analyzer/
+  — the owner's personal site showcases this project (the *project*, not the
+  repo). **Pending non-code task:** enrich that page based on the latest state
+  (M6 complete, hardening + CI). It must read as a **professional presentation**
+  for a portfolio audience, **not** a technical summary — lead with the problem
+  it solves, the value, and a few highlights; keep deep technical detail out.
+
 ---
 
 ## ⚠️ Read this first: what kind of project this is
