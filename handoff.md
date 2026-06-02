@@ -431,3 +431,12 @@ Run through this every session, in order:
 - [ ] **MLflow logs / experiment tracking review:** **N/A** — none exist.
 - [ ] **After changes:** `make test` (and `make lint` / rely on CI) before
       committing. Use Conventional Commits.
+
+## End of Session
+
+Before ending a significant work session:
+
+- Summarize completed work.
+- Update handoff.md.
+- Record pending tasks.
+- Record recommended next actions.

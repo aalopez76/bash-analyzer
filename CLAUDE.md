@@ -1,8 +1,31 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Mandatory Context Loading
 
-## Running the App
+Before performing any task in this repository:
+
+- Read `handoff.md` first.
+- If `handoff.md` does not exist, ask me to provide the current project summary before making any changes.
+- Treat `handoff.md` as the authoritative summary of the current project state.
+- Also read `AUDIT.md` and `REFACTOR_PLAN.md` when they are present; they contain the diagnostic and the prioritized improvement roadmap.
+- Do not assume context from previous Claude conversations.
+- Do not reconstruct project history by scanning the entire repository unless strictly necessary for the current task.
+- Only inspect additional files when required by the task at hand.
+- If information in `handoff.md` conflicts with the actual repository contents, surface the discrepancy and ask for clarification before making major changes.
+
+## Important: Keep handoff.md Updated
+
+After completing a significant task (feature, refactor, fix), update `handoff.md` to reflect:
+
+- What was just done.
+- Any new known issues or limitations.
+- The next recommended actions.
+
+This ensures the next session starts with an accurate picture of the project.
+
+## Repository Guidance
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.## Running the App
 
 ```bash
 ./app.sh        # or: make run
