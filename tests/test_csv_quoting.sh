@@ -112,6 +112,51 @@ else
   bad "name classification wrong"
 fi
 
+# ---- C. data-quality.sh integration (reuses quoted.csv) ----
+# selected_file already points at quoted.csv; reset the mock for one msgbox.
+echo "0" > "$MOCK_WHIPTAIL_COUNTER"
+: > "$MOCK_WHIPTAIL_LOG"
+printf 'ack\n' > "$QUEUE"
+
+PATH="$MOCK_DIR:$PATH" bash functions/data-quality.sh >/dev/null 2>&1
+
+DQ="output/quality-report.txt"
+if [ ! -f "$DQ" ]; then
+  bad "quality-report.txt generated"
+  echo "=== RESULT  passed=$PASS  failed=$FAIL ==="
+  exit 1
+fi
+ok "quality-report.txt generated"
+Q=$(cat "$DQ")
+
+if echo "$Q" | grep -q "Total rows: 3"; then
+  ok "data-quality counts 3 rows"
+else
+  bad "data-quality row count wrong (expected 3)"
+fi
+
+# Discriminator: the 'score' column report line. Columns printed are
+# name Total Empty Empty% TypeAnom Whitespace → $6 is the Whitespace count.
+# With quoting-aware splitting score = 100/200/300 → 0 whitespace. Naive
+# splitting would drop ' John"'/' Jane"' (leading space) into the score
+# column → whitespace=2.
+score_line=$(echo "$Q" | awk '/^score/ {print; exit}')
+score_ws=$(echo "$score_line" | awk '{print $6}')
+if [ "$score_ws" = "0" ]; then
+  ok "score column has 0 whitespace values (quoting-aware)"
+else
+  bad "score whitespace=$score_ws (expected 0) — quoting not honoured"
+  echo "      $score_line"
+fi
+
+# And the empty count for score must be 0 (no shifted/blank fields).
+score_empty=$(echo "$score_line" | awk '{print $3}')
+if [ "$score_empty" = "0" ]; then
+  ok "score column has 0 empty values"
+else
+  bad "score empty=$score_empty (expected 0)"
+fi
+
 echo ""
 echo "=== RESULT  passed=$PASS  failed=$FAIL ==="
 [ "$FAIL" -eq 0 ] || exit 1

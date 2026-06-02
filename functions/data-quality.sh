@@ -30,17 +30,19 @@ total_rows=$(awk 'NF' "$selected_file" | tail -n +2 | wc -l)
   printf "%-22s %6s %8s %8s %10s %10s\n" "Column" "Total" "Empty" "Empty%" "TypeAnom" "Whitespace"
   printf "%-22s %6s %8s %8s %10s %10s\n" "------" "-----" "-----" "------" "--------" "----------"
 
-  awk -F"$delimiter" '
+  # CSV-quoting-aware field splitting via FPAT (M6); unquote each value so
+  # quoted fields are counted/typed by their content, not their quotes.
+  awk -v FPAT="$(csv_fpat "$delimiter")" "$AWK_UNQUOTE"'
   NR == 1 {
     ncols = NF
-    for (i = 1; i <= NF; i++) header[i] = $i
+    for (i = 1; i <= NF; i++) header[i] = unq($i)
     next
   }
   NF == 0 { next }
   {
     for (i = 1; i <= ncols; i++) {
       total[i]++
-      raw = $i
+      raw = unq($i)
       clean = raw
       gsub(/^[ \t]+|[ \t]+$/, "", clean)
       if (clean == "") {

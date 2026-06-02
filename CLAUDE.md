@@ -60,7 +60,7 @@ Standard Unix tools: `awk`, `grep`, `sort`, `uniq`, `head`, `tail`, `wc`, `find`
 ## Known limitations
 
 - **macOS / BSD:** the code relies on GNU coreutils behaviour (`sha256sum`, `mktemp --suffix`, `realpath`, a GNU `awk` regex flag). Use Linux or WSL.
-- **CSV quoting (M6, partial):** a quoting-aware splitter exists in `common.sh` (`csv_fpat` builds a gawk `FPAT`; `AWK_UNQUOTE` provides an `unq()` function) and `file-scan.sh` uses it. The other four modules still split on the delimiter directly, so quoted fields containing the delimiter (e.g. `"Smith, John"`) are still miscounted there. Rolling the helper out to the remaining modules is tracked in `handoff.md` §11. Embedded newlines inside quoted fields remain out of scope.
+- **CSV quoting (M6, partial — 2/5 modules):** a quoting-aware splitter exists in `common.sh` (`csv_fpat` builds a gawk `FPAT`; `AWK_UNQUOTE` provides an `unq()` function) and `file-scan.sh` + `data-quality.sh` use it. The remaining modules (`search`, `format`, `csv-joiner`) still split on the delimiter directly, so quoted fields containing the delimiter (e.g. `"Smith, John"`) are still miscounted there. Rolling the helper out to them is tracked in `handoff.md` §11. Embedded newlines inside quoted fields remain out of scope.
 
 ## Architecture
 
