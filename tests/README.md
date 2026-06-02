@@ -4,19 +4,29 @@ Integration and unit tests for `bash-analyzer`. The suite drives the app non-int
 
 ## Running the suite
 
-From the project root:
+From the project root, run the whole suite via the aggregate runner
+(this is what `make test` and CI execute):
 
 ```bash
-bash tests/integration_test.sh
+make test
+# or directly:
+bash tests/run_tests.sh
 ```
 
-Covers three end-to-end flows: **File Scan**, **Regex Search**, and **Column Filter (multi-condition)**.
+The runner executes every test script in order and reports an aggregate
+pass/fail (exit non-zero if any script fails). No real `whiptail` is
+needed — every flow is driven by the mock.
 
-Focused unit tests:
+You can also run any script on its own:
 
 ```bash
-bash tests/test_duplicates.sh    # duplicate-row detection
-bash tests/test_sql_export.sh    # SQL INSERT export
+bash tests/integration_test.sh          # File Scan, Regex (all + column), security checks
+bash tests/test_duplicates.sh           # duplicate-row detection
+bash tests/test_sql_export.sh           # SQL INSERT export
+bash tests/test_joiner.sh               # CSV Joiner: INNER + LEFT
+bash tests/test_data_quality.sh         # nulls, type anomalies, whitespace, duplicates
+bash tests/test_format.sh               # Clean CSV, JSON, Markdown exports
+bash tests/test_search_sort_unique.sh   # numeric sort + unique values
 ```
 
 ## How the mock works
@@ -40,10 +50,16 @@ Environment variables:
 
 | File | Purpose |
 |---|---|
-| `integration_test.sh` | Main suite — 3 end-to-end flows |
+| `run_tests.sh` | Aggregate runner — runs every test below, reports pass/fail |
+| `integration_test.sh` | File Scan, Regex search (all + column), security checks |
+| `test_duplicates.sh` | Duplicate-file detection (File Scan) |
+| `test_sql_export.sh` | SQL INSERT export (Format) |
+| `test_joiner.sh` | CSV Joiner — INNER + LEFT join correctness |
+| `test_data_quality.sh` | Data Quality — nulls, type anomalies, whitespace, duplicates |
+| `test_format.sh` | Format — Clean CSV (fill/drop), JSON, Markdown |
+| `test_search_sort_unique.sh` | Search — numeric sort + unique values |
 | `mock_whiptail.sh` | Whiptail replacement |
-| `test_duplicates.sh` | Unit test for duplicate detection |
-| `test_sql_export.sh` | Unit test for SQL export |
+| `fixtures/` | Small deterministic CSVs (see `fixtures/README.md`) |
 | `debug_hash.sh` | Helper for hash-based duplicate debugging |
 
 ## Prerequisites

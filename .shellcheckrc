@@ -1,0 +1,8 @@
+# shellcheck configuration for bash-analyzer
+#
+# Modules load the shared library via a dynamic path
+#   source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+# which shellcheck cannot resolve statically. Allow following sources
+# where possible and silence the "not following dynamic source" notice.
+external-sources=true
+disable=SC1091

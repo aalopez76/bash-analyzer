@@ -4,6 +4,10 @@
 # SEARCH & FILTER — SEARCH.SH
 # ================================
 
+# Strict mode: -u (unset vars) + pipefail (propagate pipe failures).
+# 'errexit' intentionally omitted — see file-scan.sh for rationale.
+set -uo pipefail
+
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 load_selected_file || exit 0
@@ -91,39 +95,14 @@ case "$ACTION" in
   regex=$(whiptail --inputbox "Enter regex pattern:" 10 60 3>&1 1>&2 2>&3)
   [ -z "$regex" ] && exit 0
 
+  # Compute matching rows per scope; the report layout is shared (below).
   case "$scope" in
     "1")
       match_lines=$(tail -n +2 "$selected_file" | grep -Ei "$regex")
-      if [ -z "$match_lines" ]; then match_count=0; else match_count=$(echo "$match_lines" | wc -l); fi
-      {
-        echo "REGEX SEARCH REPORT"
-        echo "File      : $(basename "$selected_file_original")"
-        echo "Date      : $(date)"
-        echo "======================================================"
-        echo "Pattern   : $regex"
-        echo "Scope     : $scope_label"
-        echo "Matches   : $match_count"
-        echo ""
-        head -n 1 "$selected_file"
-        echo "$match_lines"
-      } > "$tmpresult"
       ;;
     "2")
       match_lines=$(awk -F"$delimiter" -v idx="$col_index" -v re="$regex" \
         'NR > 1 && $idx ~ re' "$selected_file")
-      if [ -z "$match_lines" ]; then match_count=0; else match_count=$(echo "$match_lines" | wc -l); fi
-      {
-        echo "REGEX SEARCH REPORT"
-        echo "File      : $(basename "$selected_file_original")"
-        echo "Date      : $(date)"
-        echo "======================================================"
-        echo "Pattern   : $regex"
-        echo "Scope     : $scope_label"
-        echo "Matches   : $match_count"
-        echo ""
-        head -n 1 "$selected_file"
-        echo "$match_lines"
-      } > "$tmpresult"
       ;;
     "3")
       match_lines=$(awk -F"$delimiter" -v col_list="$col_list" -v re="$regex" '
@@ -134,21 +113,22 @@ case "$ACTION" in
           }
         }
       ' "$selected_file")
-      if [ -z "$match_lines" ]; then match_count=0; else match_count=$(echo "$match_lines" | wc -l); fi
-      {
-        echo "REGEX SEARCH REPORT"
-        echo "File      : $(basename "$selected_file_original")"
-        echo "Date      : $(date)"
-        echo "======================================================"
-        echo "Pattern   : $regex"
-        echo "Scope     : $scope_label"
-        echo "Matches   : $match_count"
-        echo ""
-        head -n 1 "$selected_file"
-        echo "$match_lines"
-      } > "$tmpresult"
       ;;
   esac
+
+  if [ -z "$match_lines" ]; then match_count=0; else match_count=$(echo "$match_lines" | wc -l); fi
+  {
+    echo "REGEX SEARCH REPORT"
+    echo "File      : $(basename "$selected_file_original")"
+    echo "Date      : $(date)"
+    echo "======================================================"
+    echo "Pattern   : $regex"
+    echo "Scope     : $scope_label"
+    echo "Matches   : $match_count"
+    echo ""
+    head -n 1 "$selected_file"
+    echo "$match_lines"
+  } > "$tmpresult"
 
   save_result "$tmpresult" "$output_file" "regex_result.txt" "REGEX SEARCH"
   trap - EXIT

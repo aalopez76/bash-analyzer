@@ -4,6 +4,13 @@
 # FILE SCAN — FILE-SCAN.SH
 # ================================
 
+# Strict mode: catch unset vars (-u) and propagate pipeline failures
+# (pipefail) so a failing awk/sort mid-pipe never yields a silent,
+# corrupt report. 'errexit' (-e) is intentionally omitted: these
+# interactive scripts rely on legitimate non-zero exits (whiptail
+# cancel, grep no-match, post-decrement arithmetic) that -e would abort.
+set -uo pipefail
+
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 output_file="$OUTPUT_DIR/scan-report.txt"
@@ -39,9 +46,11 @@ lines_view=$(whiptail --radiolist "Lines to show in preview:" 15 60 4 \
 [[ -z "$lines_view" ]] && exit 0
 
 if [[ "$lines_view" != "N" ]]; then
-  num_lines=$(whiptail --inputbox "Number of lines to display (default 5):" 10 60 5 3>&1 1>&2 2>&3)
-  [[ $? -ne 0 ]] && exit 0
-  [[ -z "$num_lines" ]] && num_lines=5
+  num_lines=$(whiptail --inputbox "Number of lines to display (default 5):" 10 60 5 3>&1 1>&2 2>&3) || exit 0
+  # Validate: fall back to 5 if blank or non-numeric (avoids arithmetic errors)
+  if ! [[ "$num_lines" =~ ^[0-9]+$ ]]; then
+    num_lines=5
+  fi
 else
   num_lines=0
 fi
@@ -94,7 +103,7 @@ for file in "${files[@]}"; do
   # Hash for duplicate detection
   hash=$(sha256sum "$file" | awk '{print $1}')
   original_base=$(basename "$selected_file_original")
-  if [[ -n "${file_hashes[$hash]}" ]]; then
+  if [[ -n "${file_hashes[$hash]:-}" ]]; then
     duplicate_groups["$hash"]+=$'\n'"$original_base"
   else
     file_hashes["$hash"]="1"
