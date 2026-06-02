@@ -4,7 +4,8 @@
 > session (or human) picking up this project. Read it together with
 > [`CLAUDE.md`](CLAUDE.md). Everything here is concrete and executable.
 >
-> **Last updated:** 2026-05-30 · **Branch of record:** `refactor/hardening`
+> **Last updated:** 2026-06-02 · **Branch of record:** `main` (the
+> `refactor/hardening` work has been merged and pushed; CI is green).
 
 ---
 
@@ -177,12 +178,14 @@ here the phases are the hardening phases, since there are no ML phases.)
 
 ## 4. Current status
 
-**What works:** all 5 modules; full suite **8/8 green**; CI configured;
-strict-mode + preflight active; CRLF-safe; awk-injection-safe.
+**What works:** all 5 modules; full suite **8/8 green**; CI **green on `main`**
+(lint + test); strict-mode + preflight active; CRLF-safe; awk-injection-safe.
 
 **What is NOT done / known issues / technical debt:**
-- 🔴 **Branch not merged or pushed.** `refactor/hardening` has ~14 commits ahead
-  of `main`. CI has therefore **never actually run** (it triggers on push).
+- ✅ **Branch merged and pushed (2026-06-02).** `refactor/hardening` was merged
+  into `main` and pushed. CI ran for the first time, surfaced ~48 shellcheck
+  findings (all warning/style), which were resolved in commit `fa6dc90`; CI is
+  now green. `shellcheck` was installed locally via winget (0.11.0) for the fix.
 - 🟡 **macOS / BSD unsupported.** Code relies on GNU behaviour: `sha256sum`,
   `mktemp --suffix`, `realpath`, GNU `awk` regex flag `/i`. On macOS these
   differ (`shasum`, no `--suffix`). README documents this; not yet fixed.
@@ -192,8 +195,14 @@ strict-mode + preflight active; CRLF-safe; awk-injection-safe.
   correctness limitation. Documented; fix deferred (it's a cross-cutting change).
 - 🟢 **No non-interactive/CLI mode.** The app is whiptail-only; automation is
   only possible via the test mock.
-- 🟢 **`shellcheck` not installed in the local Windows dev environment** — local
-  `make lint` warns and exits 1; real linting happens in CI.
+- 🟢 **`shellcheck` now installed locally** (winget `koalaman.shellcheck`,
+  0.11.0). CI uses Ubuntu's apt version; lint locally if convenient, but trust
+  CI as the source of truth. The binary lives under
+  `…/WinGet/Packages/koalaman.shellcheck_*/shellcheck.exe` (not on the Git Bash
+  PATH unless you re-source the profile).
+- 🟢 **`tests/debug_hash.sh`** is a leftover debug helper with a hardcoded path
+  (`/mnt/d/.../Bash/bash-analyzer`, not this `Bash - copia` checkout) and is not
+  in the `run_tests.sh` suite. Lint-clean now, but a candidate for deletion.
 
 "Model limitations" → **N/A** (no model).
 
@@ -382,14 +391,13 @@ Statistical rules (precision@k, training windows, imputation order, etc.) →
 
 Ordered by value/risk. Each is a concrete, self-contained task.
 
-1. **Merge & push the hardening branch.** `git checkout main && git merge
-   refactor/hardening && git push`. This is the highest-value action: it lands
-   ~14 commits of safety work and makes **CI actually run for the first time**.
-   *(Requires user confirmation — outward action.)*
-2. **Verify CI green on GitHub, fix any shellcheck findings it surfaces.** Local
-   lint has never run, so CI may report real issues. Resolve or justify with
-   documented `# shellcheck disable=` comments.
-3. **CSV quoting-aware parser (resolves M6).** The biggest correctness gap.
+1. ✅ **DONE (2026-06-02) — Merge & push the hardening branch.** Merged into
+   `main` and pushed; CI ran for the first time.
+2. ✅ **DONE (2026-06-02) — CI green; shellcheck findings resolved.** First CI
+   run failed on ~48 shellcheck warnings; all fixed in `fa6dc90` (genuine fixes
+   + justified `# shellcheck disable=`/`source=` directives). CI now green.
+3. **CSV quoting-aware parser (resolves M6).** The biggest correctness gap. ←
+   **now the top open item.**
    Introduce a single shared awk/helper that respects `"…"` fields and route all
    modules through it. Add fixtures with quoted delimiters (today they're
    intentionally avoided). Cross-cutting — do it test-first.
@@ -432,11 +440,3 @@ Run through this every session, in order:
 - [ ] **After changes:** `make test` (and `make lint` / rely on CI) before
       committing. Use Conventional Commits.
 
-## End of Session
-
-Before ending a significant work session:
-
-- Summarize completed work.
-- Update handoff.md.
-- Record pending tasks.
-- Record recommended next actions.
