@@ -178,6 +178,11 @@ here the phases are the hardening phases, since there are no ML phases.)
 
 ## 4. Current status
 
+> **The project is considered COMPLETE for its current purpose (2026-06-02).**
+> All high-value safety and correctness work is done; the remaining backlog is
+> new capability / polish, gated on a real driver (see §11). Reopen only with a
+> concrete need.
+
 **What works:** all 5 modules; full suite **9/9 green**; CI **green on `main`**
 (lint + test); strict-mode + preflight active; CRLF-safe; awk-injection-safe;
 **CSV-quoting-aware across all 5 modules (M6 complete)**.
@@ -396,31 +401,53 @@ Statistical rules (precision@k, training windows, imputation order, etc.) →
 
 ## 11. Next steps (prioritized)
 
-Ordered by value/risk. Each is a concrete, self-contained task.
+> **Assessment (2026-06-02): the project is considered COMPLETE for its current
+> purpose.** All high-value safety and correctness work is done — hardening + CI
+> (green), and M6 (CSV quoting) across all 5 modules. What remains below is
+> *new capability or polish, not critical debt.* The recommendation is **not to
+> implement these reflexively (YAGNI)**: each is gated on a real driver. The
+> main risk now is over-engineering a tool that already meets its goal.
 
-1. ✅ **DONE (2026-06-02) — Merge & push the hardening branch.** Merged into
-   `main` and pushed; CI ran for the first time.
-2. ✅ **DONE (2026-06-02) — CI green; shellcheck findings resolved.** First CI
-   run failed on ~48 shellcheck warnings; all fixed in `fa6dc90` (genuine fixes
-   + justified `# shellcheck disable=`/`source=` directives). CI now green.
-3. ✅ **DONE (2026-06-02) — CSV quoting-aware parser (M6), all 5 modules.**
-   Shared helper (`common.sh:csv_fpat` + `AWK_UNQUOTE`); every module migrated
-   (`csv-joiner` via `patsplit()`); 23 assertions in `tests/test_csv_quoting.sh`.
-   The next biggest correctness item is now **#4 (macOS/BSD)**.
-4. **Real macOS/BSD support.** Replace `sha256sum`→`shasum -a 256`,
-   `mktemp --suffix`→portable form, audit `realpath` and gawk `/i`. Add macOS to
-   the CI matrix in [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-5. **Non-interactive CLI mode (`--file`, `--action`, `--out`).** Makes the tool
-   scriptable without the mock; opens real pipeline use.
-6. **Quality-of-life:** migrate tests to [`bats-core`](https://github.com/bats-core/bats-core)
-   for cleaner assertions/TAP output; add a `pre-commit` hook running
-   `make check`.
+**Done (high-value, completed):**
+1. ✅ **(2026-06-02) Merge & push the hardening branch.** Merged into `main`;
+   CI ran for the first time.
+2. ✅ **(2026-06-02) CI green; shellcheck findings resolved.** First CI run
+   failed on ~48 warnings; fixed in `fa6dc90` (genuine fixes + justified
+   `# shellcheck disable=`/`source=` directives).
+3. ✅ **(2026-06-02) CSV quoting-aware parser (M6), all 5 modules.** Shared
+   helper (`common.sh:csv_fpat` + `AWK_UNQUOTE`); `csv-joiner` via `patsplit()`;
+   23 assertions in `tests/test_csv_quoting.sh`.
 
-There is no `TODO.md` or issue tracker in the repo yet. The authoritative
-backlog is the "Diferido (backlog)" section of
-[`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md) and [`docs/AUDIT.md`](docs/AUDIT.md)
-§3 (🟢 items). Consider creating GitHub issues from item 3–6 above once the
-branch is pushed.
+**Cheap win worth doing now:**
+4. **`pre-commit` hook running `make check`.** ~10 min, high leverage: stops
+   red pushes before they reach CI. The only backlog item recommended
+   unconditionally.
+
+**Conditional — do ONLY when a concrete driver appears (otherwise leave as
+documented limitations):**
+5. **Real macOS/BSD support** — *only if a real macOS user exists.* Replace
+   `sha256sum`→`shasum -a 256`, `mktemp --suffix`→portable form, audit
+   `realpath` and gawk `/i`, add macOS to the CI matrix. Target today is
+   Linux/WSL/Git Bash; this is speculative until someone needs it.
+6. **Non-interactive CLI mode (`--file`, `--action`, `--out`)** — *only if
+   automation/pipeline use is actually wanted.* It expands the product to a
+   different audience (scripting) vs. today's guided-menu tool for non-experts.
+7. **Migrate tests to [`bats-core`](https://github.com/bats-core/bats-core)** —
+   **not recommended.** The current harness is green, CI-gated and readable;
+   migrating is churn for aesthetics with regression risk.
+
+**If "correctness" is ever revisited, these two residual warts outrank #5–#7**
+(both currently documented, neither urgent):
+- **`csv-joiner` always emits comma-CSV** regardless of input delimiter and does
+  not re-quote values: joining a `;`-file whose field contains a literal comma
+  corrupts the output.
+- **Embedded newlines inside quoted fields** break the line-based row-count /
+  duplicate-detection idioms.
+
+There is no `TODO.md` or issue tracker yet. The authoritative backlog is the
+"Diferido (backlog)" section of [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md)
+and [`docs/AUDIT.md`](docs/AUDIT.md) §3 (🟢 items). If you want tracking, create
+GitHub issues from #4–#7 above — but only #4 is recommended without a driver.
 
 ---
 
