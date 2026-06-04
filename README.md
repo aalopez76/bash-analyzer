@@ -120,12 +120,18 @@ for details. Every push and pull request runs `make check` on GitHub Actions.
 * **macOS is not yet supported.** The code relies on GNU/coreutils behaviour —
   `sha256sum`, `mktemp --suffix`, `realpath` and a GNU `awk` regex flag — that
   differs on BSD/macOS. Use Linux or WSL for now. (Tracked as future work.)
-* **CSV quoting is not honoured.** Parsing splits on the delimiter directly, so
-  a quoted field containing the delimiter (e.g. `"Smith, John"` in a
-  comma-separated file) will be miscounted. Keep delimiters out of field values,
-  or pre-clean such files. A quoting-aware parser is planned.
+* **CSV quoting — partial support.** Quoted fields containing the delimiter
+  (e.g. `"Smith, John"` in a comma-separated file) are parsed correctly across
+  all five modules. Still out of scope: embedded *newlines* inside quoted fields
+  (row counting and duplicate detection are line-based), and the CSV Joiner
+  always emits comma-separated output regardless of the input delimiter.
 
 ---
+
+## Credits
+
+The test suite and several modules were refactored and hardened with
+AI-assisted development tooling.
 
 ## License
 
