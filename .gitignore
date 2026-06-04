@@ -29,7 +29,5 @@ Thumbs.db
 # AI / process scaffolding — kept local-only, not published (see handoff §10 policy)
 CLAUDE.md
 handoff.md
-handoff/
 docs/AUDIT.md
 docs/REFACTOR_PLAN.md
-*.pdf
