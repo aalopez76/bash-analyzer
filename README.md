@@ -128,6 +128,6 @@ for details. Every push and pull request runs `make check` on GitHub Actions.
 
 ---
 
-> The test suite and several modules were refactored and hardened with AI-assisted development tooling.
+> The test suite and some modules were refactored and hardened with AI-assisted development tooling.
 
 
